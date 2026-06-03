@@ -259,7 +259,13 @@ def listar_tenants(
     db: Session = Depends(get_db)
 ):
     tenants = db.query(Tenant).all()
-    return [{"id": t.id, "nome": t.nome, "cnpj": t.cnpj, "ativo": t.ativo} for t in tenants]
+    result = []
+    for t in tenants:
+        n_condos = db.query(Condominio).filter(
+            Condominio.tenant_id == t.id, Condominio.ativo == True
+        ).count()
+        result.append({"id": t.id, "nome": t.nome, "cnpj": t.cnpj, "ativo": t.ativo, "n_condominios": n_condos})
+    return result
 
 
 @app.post("/tenants", status_code=201)
