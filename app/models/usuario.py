@@ -7,10 +7,12 @@ from datetime import datetime
 
 
 class RoleUsuario(str, PyEnum):
-    SUPER_ADMIN = "super_admin"      # você — acesso total
-    ADMIN_TENANT = "admin_tenant"    # dono da administradora
-    GERENTE = "gerente"              # gerente da administradora
-    OPERADOR = "operador"            # operador comum
+    SUPER_ADMIN = "super_admin"
+    ADMIN_TENANT = "admin_tenant"
+    GERENTE = "gerente"
+    OPERADOR = "operador"
+    SINDICO = "sindico"
+    MORADOR = "morador"
 
 
 class Usuario(Base, TimestampMixin):
@@ -28,6 +30,11 @@ class Usuario(Base, TimestampMixin):
     # Isolamento — super_admin tem tenant_id = None
     tenant_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("tenants.id", ondelete="CASCADE"),
+        nullable=True, index=True
+    )
+    # Sindico/Morador pertencem a um condominio especifico
+    condominio_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("condominios.id", ondelete="CASCADE"),
         nullable=True, index=True
     )
 

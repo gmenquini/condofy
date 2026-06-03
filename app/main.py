@@ -150,7 +150,8 @@ def me(usuario: Usuario = Depends(get_usuario_atual)):
         "nome": usuario.nome,
         "email": usuario.email,
         "role": usuario.role,
-        "tenant_id": usuario.tenant_id
+        "tenant_id": usuario.tenant_id,
+        "condominio_id": getattr(usuario, 'condominio_id', None)
     }
 
 
@@ -223,6 +224,10 @@ def criar_usuario_endpoint(
         raise HTTPException(403, "Não permitido")
 
     u = criar_usuario(db, dados["nome"], dados["email"], dados["senha"], role, tenant_id)
+    # Vincula condomínio para síndico/morador
+    if dados.get("condominio_id") and role in ["sindico", "morador"]:
+        u.condominio_id = dados["condominio_id"]
+        db.commit()
     return {"id": u.id, "nome": u.nome, "email": u.email, "role": u.role}
 
 
