@@ -292,7 +292,9 @@ def buscar_tenant(tenant_id: str, usuario_atual: Usuario = Depends(get_usuario_a
     tenant = db.get(Tenant, tenant_id)
     if not tenant:
         raise HTTPException(404, "Tenant não encontrado")
-    return {"id": tenant.id, "nome": tenant.nome, "cnpj": tenant.cnpj, "plano": tenant.plano}
+    n_condos = db.query(Condominio).filter(Condominio.tenant_id == tenant.id, Condominio.ativo == True).count()
+    return {"id": tenant.id, "nome": tenant.nome, "cnpj": tenant.cnpj, "plano": tenant.plano, "n_condominios": n_condos,
+            "cidade": tenant.cidade, "estado": tenant.estado, "endereco": tenant.endereco, "lat": tenant.lat, "lng": tenant.lng}
 
 
 # ─── Condomínios ──────────────────────────────────────────────────────────────
