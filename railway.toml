@@ -2,3 +2,6 @@
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
+
+[build]
+aptPackages = ["libpq-dev"]
