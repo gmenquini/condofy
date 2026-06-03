@@ -775,10 +775,7 @@ async function dashAdm(){
     <table><thead><tr><th>Nome</th><th>Cidade/UF</th><th>Unidades</th><th>Saldo</th><th>Pendentes</th><th>Ação</th></tr></thead>
     <tbody id="tb-dash-conds"></tbody></table>
   </div>
-  <div class="card" style="margin-top:4px">
-    <div class="ch"><i class="ti ti-map-pin" style="margin-right:5px"></i>Localização <span class="badge bg" style="margin-left:4px"><span class="dot dg"></span>Condomínios</span></div>
-<div id="map2" class="map-wrap" style="height:260px"></div>
-  </div>`;
+`;
 
   const cs=d.condominios.filter(c=>c.saldo>0).slice(0,8);
   document.getElementById('lg2').innerHTML=legHTML([['#4ade80','Saldo R$']]);
