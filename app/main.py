@@ -53,11 +53,38 @@ def get_db():
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     print("✓ Tabelas criadas/verificadas")
+    # Adiciona colunas novas que podem não existir no banco antigo
+    try:
+        from sqlalchemy import text
+        with engine.connect() as conn:
+            for sql in [
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS endereco VARCHAR(300)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cidade VARCHAR(100)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS estado VARCHAR(2)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS cep VARCHAR(9)",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS lat FLOAT",
+                "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS lng FLOAT",
+                "ALTER TABLE condominios ADD COLUMN IF NOT EXISTS lat FLOAT",
+                "ALTER TABLE condominios ADD COLUMN IF NOT EXISTS lng FLOAT",
+                "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS condominio_id VARCHAR(36)",
+            ]:
+                try:
+                    conn.execute(text(sql))
+                except Exception:
+                    pass
+            conn.commit()
+        print("✓ Colunas novas verificadas")
+    except Exception as e:
+        print(f"⚠ migrate ignorado: {e}")
     db = SessionLocal()
     try:
         seed_usuarios(db)
-        from .services.seed_demo import seed_demo
-        seed_demo(db)
+        try:
+            from .services.seed_demo import seed_demo
+            seed_demo(db)
+        except Exception as e:
+            print(f"⚠ seed_demo ignorado: {e}")
+            db.rollback()
     finally:
         db.close()
     yield
