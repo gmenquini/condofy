@@ -498,3 +498,250 @@ def criar_lancamento(
     db.commit()
     db.refresh(lancamento)
     return {"id": lancamento.id, "descricao": lancamento.descricao}
+
+
+# ─── Dashboard endpoints ──────────────────────────────────────────────────────
+
+@app.get("/dashboard/super-admin")
+async def dashboard_super_admin(
+    usuario_atual: Usuario = Depends(requer_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Dashboard do Super Admin — visão macro do negócio."""
+    from sqlalchemy import func
+    from .models.transacao import StatusConciliacao
+
+    tenants = db.query(Tenant).filter(Tenant.ativo == True).all()
+    total_condominios = db.query(Condominio).filter(Condominio.ativo == True).count()
+    total_usuarios = db.query(Usuario).filter(Usuario.ativo == True).count()
+    total_pendentes = db.query(Transacao).filter(
+        Transacao.status_conciliacao == StatusConciliacao.PENDENTE
+    ).count()
+
+    # Dados por tenant
+    tenants_data = []
+    for t in tenants:
+        n_condos = db.query(Condominio).filter(
+            Condominio.tenant_id == t.id, Condominio.ativo == True
+        ).count()
+        n_contas = db.query(ContaBancaria).filter(
+            ContaBancaria.tenant_id == t.id, ContaBancaria.ativa == True
+        ).count()
+        contas_desconectadas = db.query(ContaBancaria).filter(
+            ContaBancaria.tenant_id == t.id,
+            ContaBancaria.pluggy_status != "UPDATED",
+            ContaBancaria.pluggy_item_id != None
+        ).count()
+        tenants_data.append({
+            "id": t.id,
+            "nome": t.nome,
+            "cnpj": t.cnpj,
+            "n_condominios": n_condos,
+            "n_contas": n_contas,
+            "contas_desconectadas": contas_desconectadas,
+            "ativo": t.ativo
+        })
+
+    # Ordena por número de condomínios
+    tenants_data.sort(key=lambda x: x["n_condominios"], reverse=True)
+
+    return {
+        "metricas": {
+            "total_administradoras": len(tenants),
+            "total_condominios": total_condominios,
+            "total_usuarios": total_usuarios,
+            "total_pendentes_conciliacao": total_pendentes,
+        },
+        "administradoras": tenants_data,
+        "alertas": [
+            t for t in tenants_data if t["contas_desconectadas"] > 0
+        ]
+    }
+
+
+@app.get("/tenants/{tenant_id}/dashboard")
+async def dashboard_administradora(
+    tenant_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db)
+):
+    """Dashboard da Administradora — visão operacional."""
+    from .models.transacao import StatusConciliacao
+
+    if usuario_atual.role != "super_admin" and usuario_atual.tenant_id != tenant_id:
+        raise HTTPException(403, "Sem permissão")
+
+    condominios = db.query(Condominio).filter(
+        Condominio.tenant_id == tenant_id, Condominio.ativo == True
+    ).all()
+
+    total_unidades = sum(c.total_unidades for c in condominios)
+
+    contas = db.query(ContaBancaria).filter(
+        ContaBancaria.tenant_id == tenant_id, ContaBancaria.ativa == True
+    ).all()
+
+    total_saldo = sum(float(c.saldo_atual) for c in contas if c.saldo_atual)
+
+    pendentes = db.query(Transacao).filter(
+        Transacao.tenant_id == tenant_id,
+        Transacao.status_conciliacao == StatusConciliacao.PENDENTE
+    ).count()
+
+    usuarios = db.query(Usuario).filter(
+        Usuario.tenant_id == tenant_id, Usuario.ativo == True
+    ).count()
+
+    # Dados por condomínio
+    condominios_data = []
+    for c in condominios:
+        contas_c = db.query(ContaBancaria).filter(
+            ContaBancaria.condominio_id == c.id
+        ).all()
+        saldo_c = sum(float(ct.saldo_atual) for ct in contas_c if ct.saldo_atual)
+        pend_c = db.query(Transacao).filter(
+            Transacao.condominio_id == c.id,
+            Transacao.status_conciliacao == StatusConciliacao.PENDENTE
+        ).count()
+        contas_desc = sum(1 for ct in contas_c if ct.pluggy_status not in ["UPDATED", None])
+        condominios_data.append({
+            "id": c.id,
+            "nome": c.nome,
+            "cidade": c.cidade,
+            "estado": c.estado,
+            "total_unidades": c.total_unidades,
+            "saldo": saldo_c,
+            "pendentes_conciliacao": pend_c,
+            "contas_desconectadas": contas_desc,
+        })
+
+    return {
+        "metricas": {
+            "total_condominios": len(condominios),
+            "total_unidades": total_unidades,
+            "total_saldo": total_saldo,
+            "pendentes_conciliacao": pendentes,
+            "total_usuarios": usuarios,
+            "total_contas": len(contas),
+        },
+        "condominios": condominios_data,
+        "alertas": {
+            "contas_desconectadas": sum(1 for ct in contas if ct.pluggy_status not in ["UPDATED", None] and ct.pluggy_item_id),
+            "pendentes_conciliacao": pendentes,
+        }
+    }
+
+
+@app.get("/tenants/{tenant_id}/condominios/{condominio_id}/dashboard")
+async def dashboard_condominio(
+    tenant_id: str,
+    condominio_id: str,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db)
+):
+    """Dashboard do Condomínio — visão financeira detalhada."""
+    from datetime import date
+    from .models.transacao import StatusConciliacao, TipoTransacao
+    from .models.lancamento import LancamentoStatus
+
+    if usuario_atual.role != "super_admin" and usuario_atual.tenant_id != tenant_id:
+        raise HTTPException(403, "Sem permissão")
+
+    condo = db.query(Condominio).filter(
+        Condominio.id == condominio_id,
+        Condominio.tenant_id == tenant_id
+    ).first()
+    if not condo:
+        raise HTTPException(404, "Condomínio não encontrado")
+
+    contas = db.query(ContaBancaria).filter(
+        ContaBancaria.condominio_id == condominio_id
+    ).all()
+    saldo_total = sum(float(c.saldo_atual) for c in contas if c.saldo_atual)
+
+    # Transações do mês
+    hoje = date.today()
+    inicio_mes = hoje.replace(day=1)
+
+    from sqlalchemy import and_
+    from datetime import datetime
+
+    trans_mes_credito = db.query(Transacao).filter(
+        Transacao.condominio_id == condominio_id,
+        Transacao.tipo == TipoTransacao.CREDITO,
+        Transacao.data >= datetime.combine(inicio_mes, datetime.min.time())
+    ).all()
+    trans_mes_debito = db.query(Transacao).filter(
+        Transacao.condominio_id == condominio_id,
+        Transacao.tipo == TipoTransacao.DEBITO,
+        Transacao.data >= datetime.combine(inicio_mes, datetime.min.time())
+    ).all()
+
+    receita_mes = sum(float(t.valor) for t in trans_mes_credito)
+    despesa_mes = sum(float(t.valor) for t in trans_mes_debito)
+
+    # Lançamentos pendentes próximos 30 dias
+    from datetime import timedelta
+    prox_30 = hoje + timedelta(days=30)
+    prox_venc = db.query(Lancamento).filter(
+        Lancamento.condominio_id == condominio_id,
+        Lancamento.status == LancamentoStatus.ABERTO,
+        Lancamento.data_vencimento <= prox_30,
+        Lancamento.data_vencimento >= hoje
+    ).order_by(Lancamento.data_vencimento).limit(10).all()
+
+    # Últimas transações conciliadas
+    ultimas_trans = db.query(Transacao).filter(
+        Transacao.condominio_id == condominio_id
+    ).order_by(Transacao.data.desc()).limit(8).all()
+
+    # Pendentes
+    pendentes = db.query(Transacao).filter(
+        Transacao.condominio_id == condominio_id,
+        Transacao.status_conciliacao == StatusConciliacao.PENDENTE
+    ).count()
+    conciliadas = db.query(Transacao).filter(
+        Transacao.condominio_id == condominio_id,
+        Transacao.status_conciliacao == StatusConciliacao.CONCILIADA
+    ).count()
+
+    return {
+        "condominio": {
+            "id": condo.id,
+            "nome": condo.nome,
+            "cidade": condo.cidade,
+            "estado": condo.estado,
+            "total_unidades": condo.total_unidades,
+        },
+        "metricas": {
+            "saldo_total": saldo_total,
+            "receita_mes": receita_mes,
+            "despesa_mes": despesa_mes,
+            "saldo_mes": receita_mes - despesa_mes,
+            "total_contas": len(contas),
+            "pendentes_conciliacao": pendentes,
+            "conciliadas": conciliadas,
+        },
+        "proximos_vencimentos": [
+            {
+                "descricao": l.descricao,
+                "valor": float(l.valor),
+                "data_vencimento": str(l.data_vencimento),
+                "tipo": l.tipo,
+                "parcela": f"{l.numero_parcela}/{l.total_parcelas}" if l.total_parcelas else None,
+            } for l in prox_venc
+        ],
+        "ultimas_transacoes": [
+            {
+                "data": t.data.strftime("%d/%m"),
+                "descricao": t.descricao[:40],
+                "valor": float(t.valor),
+                "tipo": t.tipo,
+                "status": t.status_conciliacao,
+            } for t in ultimas_trans
+        ],
+        "alertas": {
+            "saldo_baixo": saldo_total < 10000,
+            "pendentes_altos": pendentes > 5,
+        }
+    }
