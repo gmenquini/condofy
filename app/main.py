@@ -920,3 +920,100 @@ async def atualizar_endereco_condo(
             setattr(condo, campo, dados[campo])
     db.commit()
     return {"ok": True}
+
+
+# ─── GET Lançamentos ──────────────────────────────────────────────────────────
+
+@app.get("/tenants/{tenant_id}/condominios/{condominio_id}/lancamentos")
+def listar_lancamentos(
+    tenant_id: str,
+    condominio_id: str,
+    status: str = None,
+    tipo: str = None,
+    mes_referencia: str = None,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db)
+):
+    if usuario_atual.role != "super_admin" and usuario_atual.tenant_id != tenant_id:
+        raise HTTPException(403, "Sem permissão")
+    query = db.query(Lancamento).filter(
+        Lancamento.tenant_id == tenant_id,
+        Lancamento.condominio_id == condominio_id
+    )
+    if status:
+        query = query.filter(Lancamento.status == status)
+    if tipo:
+        query = query.filter(Lancamento.tipo == tipo)
+    if mes_referencia:
+        query = query.filter(Lancamento.mes_referencia == mes_referencia)
+    lancamentos = query.order_by(Lancamento.data_vencimento.asc()).limit(200).all()
+    return [{
+        "id": l.id,
+        "descricao": l.descricao,
+        "tipo": l.tipo,
+        "valor": float(l.valor),
+        "data_vencimento": str(l.data_vencimento),
+        "mes_referencia": l.mes_referencia,
+        "status": l.status,
+        "numero_parcela": l.numero_parcela,
+        "total_parcelas": l.total_parcelas,
+        "fornecedor_id": l.fornecedor_id,
+    } for l in lancamentos]
+
+
+@app.delete("/tenants/{tenant_id}/condominios/{condominio_id}/lancamentos/{lancamento_id}")
+def cancelar_lancamento(
+    tenant_id: str, condominio_id: str, lancamento_id: str,
+    usuario_atual: Usuario = Depends(requer_admin_ou_acima),
+    db: Session = Depends(get_db)
+):
+    if usuario_atual.role != "super_admin" and usuario_atual.tenant_id != tenant_id:
+        raise HTTPException(403, "Sem permissão")
+    l = db.query(Lancamento).filter(
+        Lancamento.id == lancamento_id,
+        Lancamento.tenant_id == tenant_id
+    ).first()
+    if not l:
+        raise HTTPException(404, "Lançamento não encontrado")
+    from .models.lancamento import LancamentoStatus
+    l.status = LancamentoStatus.CANCELADO
+    db.commit()
+    return {"ok": True}
+
+
+@app.patch("/tenants/{tenant_id}/condominios/{condominio_id}/lancamentos/{lancamento_id}")
+def atualizar_lancamento(
+    tenant_id: str, condominio_id: str, lancamento_id: str,
+    dados: dict,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db)
+):
+    if usuario_atual.role != "super_admin" and usuario_atual.tenant_id != tenant_id:
+        raise HTTPException(403, "Sem permissão")
+    l = db.query(Lancamento).filter(
+        Lancamento.id == lancamento_id,
+        Lancamento.tenant_id == tenant_id
+    ).first()
+    if not l:
+        raise HTTPException(404, "Lançamento não encontrado")
+    for campo in ["descricao", "valor", "data_vencimento", "observacoes"]:
+        if campo in dados:
+            setattr(l, campo, dados[campo])
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/usuarios/{usuario_id}")
+def desativar_usuario(
+    usuario_id: str,
+    usuario_atual: Usuario = Depends(requer_admin_ou_acima),
+    db: Session = Depends(get_db)
+):
+    u = db.get(Usuario, usuario_id)
+    if not u:
+        raise HTTPException(404, "Usuário não encontrado")
+    if usuario_atual.role != "super_admin" and u.tenant_id != usuario_atual.tenant_id:
+        raise HTTPException(403, "Sem permissão")
+    u.ativo = False
+    db.commit()
+    return {"ok": True}
