@@ -798,7 +798,7 @@ async function dashAdm(){
     <td><button class="btn" style="font-size:10px;padding:4px 8px" onclick="dashCondo('${c.id}')"><i class="ti ti-chart-bar"></i>Dashboard</button></td>
   </tr>`).join('');
 
-  drawMap('map2','maptip2',d.condominios.map((c,i)=>({label:c.nome,city:`${c.cidade||'?'} · ${c.total_unidades} unid.`,type:'condo',idx:i,lat:c.lat,lng:c.lng,state:c.estado})));
+  // mapa removido do dashboard da administradora
 }
 
 async function dashCondo(condoId){
@@ -1190,31 +1190,48 @@ async function buscarCNPJ(prefix){
     const ok=document.getElementById(prefix+'-cnpj-ok');
     if(loading)loading.style.display='block';
     if(ok)ok.style.display='none';
-    try{
-      const d=await api('GET',`/cnpj/${cnpj}`);
-      // Preenche campos comuns
-      const fields={
-        nome:d.nome||d.fantasia,
-        email:d.email,
-        cidade:d.municipio,
-        uf:d.uf,
-        end:d.endereco_completo,
-        cep:d.cep,
-      };
-      Object.entries(fields).forEach(([k,v])=>{
-        const el=document.getElementById(prefix+'-'+k);
-        if(el&&v&&!el.value)el.value=v;
-      });
-      if(loading)loading.style.display='none';
-      if(ok)ok.style.display='block';
-      // Auto-geocodifica
-      if(d.municipio&&d.uf){
-        geocodificarEndereco(d.endereco_completo||`${d.municipio},${d.uf},Brasil`,prefix);
-      }
-    }catch(ex){
-      if(loading)loading.style.display='none';
-      toast('CNPJ não encontrado na Receita Federal','error');
+    // Chama diretamente do browser para evitar restrições do servidor
+    const apis=[
+      `https://brasilapi.com.br/api/cnpj/v1/${cnpj}`,
+      `https://open.cnpja.com/office/${cnpj}`,
+      `https://publica.cnpj.ws/cnpj/${cnpj}`,
+    ];
+    let dados=null;
+    for(const url of apis){
+      try{
+        const r=await fetch(url,{headers:{'Accept':'application/json'}});
+        if(!r.ok)continue;
+        const d=await r.json();
+        if(d.razao_social){
+          // BrasilAPI
+          dados={nome:d.razao_social,email:d.email||'',municipio:d.municipio||'',uf:d.uf||'',
+            cep:d.cep||'',logradouro:d.logradouro||'',numero:d.numero||'',bairro:d.bairro||''};
+        } else if(d.company||d.razao_social||d.estabelecimento){
+          // CNPJá ou CNPJ.ws
+          const est=d.estabelecimento||{};
+          const addr=d.address||est||{};
+          dados={nome:d.company?.name||est.nome_fantasia||est.razao_social||'',
+            email:(d.emails||[])[0]?.address||(est.email)||'',
+            municipio:addr.city||est.cidade?.descricao||'',
+            uf:addr.state||est.estado?.sigla||'',
+            cep:addr.zip||est.cep||'',
+            logradouro:addr.street||est.logradouro||'',
+            numero:addr.number||est.numero||'',
+            bairro:addr.district||est.bairro||''};
+        }
+        if(dados&&dados.nome)break;
+      }catch(ex){continue;}
     }
+    if(loading)loading.style.display='none';
+    if(!dados||!dados.nome){toast('CNPJ não encontrado. Tente preencher manualmente.','error');return;}
+    const end=`${dados.logradouro} ${dados.numero}, ${dados.bairro}, ${dados.municipio}/${dados.uf} - CEP ${dados.cep}`.replace(/\s+/g,' ').trim();
+    const fields={nome:dados.nome,email:dados.email,cidade:dados.municipio,uf:dados.uf,end,cep:dados.cep};
+    Object.entries(fields).forEach(([k,v])=>{
+      const el=document.getElementById(prefix+'-'+k);
+      if(el&&v&&!el.value)el.value=v;
+    });
+    if(ok)ok.style.display='block';
+    if(dados.municipio&&dados.uf)geocodificarEndereco(end||`${dados.municipio},${dados.uf},Brasil`,prefix);
   },400);
 }
 
