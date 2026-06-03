@@ -56,6 +56,8 @@ async def lifespan(app: FastAPI):
     db = SessionLocal()
     try:
         seed_usuarios(db)
+        from .services.seed_demo import seed_demo
+        seed_demo(db)
     finally:
         db.close()
     yield
