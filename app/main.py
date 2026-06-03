@@ -801,29 +801,55 @@ async def consultar_cnpj(
     cnpj_limpo = ''.join(c for c in cnpj if c.isdigit())
     if len(cnpj_limpo) != 14:
         raise HTTPException(400, "CNPJ inválido")
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r = await client.get(f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_limpo}")
-            if r.status_code != 200:
-                raise HTTPException(404, "CNPJ não encontrado")
-            d = r.json()
-            return {
-                "nome": d.get("razao_social", ""),
-                "fantasia": d.get("nome_fantasia", ""),
-                "cnpj": cnpj_limpo,
-                "email": d.get("email", ""),
-                "telefone": d.get("ddd_telefone_1", ""),
-                "cep": d.get("cep", ""),
-                "logradouro": d.get("logradouro", ""),
-                "numero": d.get("numero", ""),
-                "complemento": d.get("complemento", ""),
-                "bairro": d.get("bairro", ""),
-                "municipio": d.get("municipio", ""),
-                "uf": d.get("uf", ""),
-                "endereco_completo": f"{d.get('logradouro','')} {d.get('numero','')}, {d.get('bairro','')}, {d.get('municipio','')}/{d.get('uf','')} - CEP {d.get('cep','')}"
-            }
-    except httpx.TimeoutException:
-        raise HTTPException(504, "Timeout ao consultar CNPJ")
+    # Tenta BrasilAPI primeiro, fallback para CNPJá
+    apis = [
+        f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_limpo}",
+        f"https://open.cnpja.com/office/{cnpj_limpo}",
+    ]
+    for url in apis:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.get(url, headers={"User-Agent": "DOneFinance/1.0"})
+                if r.status_code != 200:
+                    continue
+                d = r.json()
+                # Normaliza campos entre BrasilAPI e CNPJá
+                if "razao_social" in d:
+                    # BrasilAPI
+                    municipio = d.get("municipio", "")
+                    uf = d.get("uf", "")
+                    logradouro = d.get("logradouro", "")
+                    numero = d.get("numero", "")
+                    bairro = d.get("bairro", "")
+                    cep = d.get("cep", "")
+                    nome = d.get("razao_social", "")
+                    email = d.get("email", "")
+                else:
+                    # CNPJá
+                    addr = d.get("address", {})
+                    municipio = addr.get("city", "")
+                    uf = addr.get("state", "")
+                    logradouro = addr.get("street", "")
+                    numero = addr.get("number", "")
+                    bairro = addr.get("district", "")
+                    cep = addr.get("zip", "")
+                    nome = d.get("company", {}).get("name", "") or d.get("alias", "")
+                    email = d.get("emails", [{}])[0].get("address", "") if d.get("emails") else ""
+                return {
+                    "nome": nome,
+                    "cnpj": cnpj_limpo,
+                    "email": email,
+                    "cep": cep,
+                    "logradouro": logradouro,
+                    "numero": numero,
+                    "bairro": bairro,
+                    "municipio": municipio,
+                    "uf": uf,
+                    "endereco_completo": f"{logradouro} {numero}, {bairro}, {municipio}/{uf} - CEP {cep}".strip(", ")
+                }
+        except Exception:
+            continue
+    raise HTTPException(404, "CNPJ não encontrado. Verifique o número e tente novamente.")
 
 
 @app.get("/geocode")
