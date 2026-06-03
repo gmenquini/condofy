@@ -23,6 +23,12 @@ class Tenant(Base, TimestampMixin):
     plano: Mapped[str] = mapped_column(String(50), default="basico")  # basico, profissional, enterprise
     max_condominios: Mapped[int] = mapped_column(Integer, default=5)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
+    endereco: Mapped[str] = mapped_column(String(300), nullable=True)
+    cidade: Mapped[str] = mapped_column(String(100), nullable=True)
+    estado: Mapped[str] = mapped_column(String(2), nullable=True)
+    cep: Mapped[str] = mapped_column(String(9), nullable=True)
+    lat: Mapped[float] = mapped_column(nullable=True)
+    lng: Mapped[float] = mapped_column(nullable=True)
 
     # Pluggy — credenciais por tenant (cada administradora tem as próprias)
     pluggy_client_id: Mapped[str] = mapped_column(String(100), nullable=True)

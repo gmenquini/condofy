@@ -264,7 +264,8 @@ def listar_tenants(
         n_condos = db.query(Condominio).filter(
             Condominio.tenant_id == t.id, Condominio.ativo == True
         ).count()
-        result.append({"id": t.id, "nome": t.nome, "cnpj": t.cnpj, "ativo": t.ativo, "n_condominios": n_condos})
+        result.append({"id": t.id, "nome": t.nome, "cnpj": t.cnpj, "ativo": t.ativo, "n_condominios": n_condos,
+            "cidade": t.cidade, "estado": t.estado, "endereco": t.endereco, "lat": t.lat, "lng": t.lng})
     return result
 
 
@@ -756,3 +757,109 @@ async def dashboard_condominio(
             "pendentes_altos": pendentes > 5,
         }
     }
+
+
+# ─── CNPJ + Geocode ───────────────────────────────────────────────────────────
+
+@app.get("/cnpj/{cnpj}")
+async def consultar_cnpj(
+    cnpj: str,
+    _: Usuario = Depends(get_usuario_atual)
+):
+    """Consulta dados da empresa na Receita Federal via BrasilAPI."""
+    cnpj_limpo = ''.join(c for c in cnpj if c.isdigit())
+    if len(cnpj_limpo) != 14:
+        raise HTTPException(400, "CNPJ inválido")
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(f"https://brasilapi.com.br/api/cnpj/v1/{cnpj_limpo}")
+            if r.status_code != 200:
+                raise HTTPException(404, "CNPJ não encontrado")
+            d = r.json()
+            return {
+                "nome": d.get("razao_social", ""),
+                "fantasia": d.get("nome_fantasia", ""),
+                "cnpj": cnpj_limpo,
+                "email": d.get("email", ""),
+                "telefone": d.get("ddd_telefone_1", ""),
+                "cep": d.get("cep", ""),
+                "logradouro": d.get("logradouro", ""),
+                "numero": d.get("numero", ""),
+                "complemento": d.get("complemento", ""),
+                "bairro": d.get("bairro", ""),
+                "municipio": d.get("municipio", ""),
+                "uf": d.get("uf", ""),
+                "endereco_completo": f"{d.get('logradouro','')} {d.get('numero','')}, {d.get('bairro','')}, {d.get('municipio','')}/{d.get('uf','')} - CEP {d.get('cep','')}"
+            }
+    except httpx.TimeoutException:
+        raise HTTPException(504, "Timeout ao consultar CNPJ")
+
+
+@app.get("/geocode")
+async def geocodificar(
+    endereco: str,
+    _: Usuario = Depends(get_usuario_atual)
+):
+    """Converte endereço em lat/lng via OpenStreetMap Nominatim."""
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                "https://nominatim.openstreetmap.org/search",
+                params={"q": endereco, "format": "json", "limit": 1, "countrycodes": "br"},
+                headers={"User-Agent": "Condofy/1.0"}
+            )
+            results = r.json()
+            if not results:
+                return {"lat": None, "lng": None, "found": False}
+            return {
+                "lat": float(results[0]["lat"]),
+                "lng": float(results[0]["lon"]),
+                "display": results[0].get("display_name", ""),
+                "found": True
+            }
+    except Exception as e:
+        return {"lat": None, "lng": None, "found": False, "error": str(e)}
+
+
+@app.patch("/tenants/{tenant_id}/endereco")
+async def atualizar_endereco_tenant(
+    tenant_id: str,
+    dados: dict,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db)
+):
+    """Atualiza endereço e coordenadas de um tenant."""
+    if usuario_atual.role != "super_admin" and usuario_atual.tenant_id != tenant_id:
+        raise HTTPException(403, "Sem permissão")
+    tenant = db.get(Tenant, tenant_id)
+    if not tenant:
+        raise HTTPException(404, "Tenant não encontrado")
+    for campo in ["endereco", "cidade", "estado", "cep", "lat", "lng"]:
+        if campo in dados:
+            setattr(tenant, campo, dados[campo])
+    db.commit()
+    return {"ok": True}
+
+
+@app.patch("/tenants/{tenant_id}/condominios/{condominio_id}/endereco")
+async def atualizar_endereco_condo(
+    tenant_id: str,
+    condominio_id: str,
+    dados: dict,
+    usuario_atual: Usuario = Depends(get_usuario_atual),
+    db: Session = Depends(get_db)
+):
+    """Atualiza endereço e coordenadas de um condomínio."""
+    if usuario_atual.role != "super_admin" and usuario_atual.tenant_id != tenant_id:
+        raise HTTPException(403, "Sem permissão")
+    condo = db.query(Condominio).filter(
+        Condominio.id == condominio_id,
+        Condominio.tenant_id == tenant_id
+    ).first()
+    if not condo:
+        raise HTTPException(404, "Condomínio não encontrado")
+    for campo in ["endereco", "cidade", "estado", "cep", "lat", "lng"]:
+        if campo in dados:
+            setattr(condo, campo, dados[campo])
+    db.commit()
+    return {"ok": True}

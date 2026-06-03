@@ -33,6 +33,8 @@ class Condominio(Base, TimestampMixin):
     total_unidades: Mapped[int] = mapped_column(Integer, default=0)
 
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
+    lat: Mapped[float] = mapped_column(nullable=True)
+    lng: Mapped[float] = mapped_column(nullable=True)
 
     # Relacionamentos
     tenant: Mapped["Tenant"] = relationship("Tenant", back_populates="condominios")

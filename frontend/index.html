@@ -6,6 +6,8 @@
 <title>Condofy</title>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -181,6 +183,20 @@ tr:hover td{background:#ffffff05}
 .boleto-info .venc{font-size:11px;color:var(--text2);margin-top:2px}
 .boleto-valor{font-family:var(--mono);font-size:16px;font-weight:500}
 .boleto-valor.pago{color:var(--green3)}.boleto-valor.pendente{color:var(--yellow)}.boleto-valor.vencido{color:var(--red)}
+
+/* ── LEAFLET ── */
+.leaflet-container{background:var(--bg3)!important;font-family:var(--font)!important}
+.leaflet-tile{filter:brightness(0.85) saturate(0.8)}
+.leaflet-popup-content-wrapper{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,.5)}
+.leaflet-popup-tip{background:var(--bg2)}
+.leaflet-popup-content{font-size:11px;font-family:var(--font);margin:8px 12px}
+.leaflet-popup-content b{display:block;margin-bottom:2px;font-size:12px}
+.leaflet-control-zoom a{background:var(--bg2)!important;color:var(--text)!important;border-color:var(--border)!important}
+.leaflet-control-zoom a:hover{background:var(--bg3)!important}
+.leaflet-control-fullscreen a{background:var(--bg2)!important;color:var(--text)!important;border-color:var(--border)!important}
+.map-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.cnpj-loading{font-size:10px;color:var(--text2);margin-top:4px;display:none}
+.cnpj-ok{font-size:10px;color:var(--green3);margin-top:4px;display:none}
 </style>
 </head>
 <body>
@@ -390,9 +406,20 @@ tr:hover td{background:#ffffff05}
 <div id="m-tenant" class="mo" style="display:none" onclick="closeM('m-tenant')"><div class="md2" onclick="e()">
   <div class="mh"><span class="mt2">Nova administradora</span><button class="btn" onclick="closeM('m-tenant')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
-    <div class="fg"><label class="fl">Nome da empresa</label><input class="fi" id="t-nome"></div>
-    <div class="fg"><label class="fl">CNPJ</label><input class="fi" id="t-cnpj"></div>
-    <div class="fg"><label class="fl">Email</label><input class="fi" id="t-email" type="email"></div>
+    <div class="fg">
+      <label class="fl">CNPJ <span style="color:var(--green3);font-weight:normal;cursor:pointer" onclick="buscarCNPJ('t')">(buscar automaticamente)</span></label>
+      <input class="fi" id="t-cnpj" placeholder="00.000.000/0001-00" oninput="if(this.value.replace(/\D/g,'').length===14)buscarCNPJ('t')">
+      <div class="cnpj-loading" id="t-cnpj-loading"><span class="sp"></span> Buscando dados do CNPJ...</div>
+      <div class="cnpj-ok" id="t-cnpj-ok"><i class="ti ti-check"></i> Dados preenchidos automaticamente</div>
+    </div>
+    <div class="fg"><label class="fl">Nome da empresa</label><input class="fi" id="t-nome" placeholder="Preenchido automaticamente"></div>
+    <div class="fg"><label class="fl">Email</label><input class="fi" id="t-email" type="email" placeholder="Preenchido automaticamente"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Cidade</label><input class="fi" id="t-cidade" placeholder="Preenchido automaticamente"></div>
+      <div class="fg"><label class="fl">UF</label><input class="fi" id="t-uf" maxlength="2" placeholder="SP"></div>
+    </div>
+    <div class="fg"><label class="fl">Endereço</label><input class="fi" id="t-end" placeholder="Preenchido automaticamente"></div>
+    <div class="fg"><label class="fl">CEP</label><input class="fi" id="t-cep" placeholder="00000-000"></div>
   </div>
   <div class="mf"><button class="btn" onclick="closeM('m-tenant')">Cancelar</button><button class="btn btnp" onclick="doCreateTenant()"><i class="ti ti-plus"></i>Criar</button></div>
 </div></div>
@@ -400,10 +427,20 @@ tr:hover td{background:#ffffff05}
 <div id="m-condo" class="mo" style="display:none" onclick="closeM('m-condo')"><div class="md2" onclick="e()">
   <div class="mh"><span class="mt2">Novo condomínio</span><button class="btn" onclick="closeM('m-condo')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
-    <div class="fg"><label class="fl">Nome</label><input class="fi" id="c-nome"></div>
-    <div class="fg"><label class="fl">CNPJ</label><input class="fi" id="c-cnpj"></div>
-    <div class="fr"><div class="fg"><label class="fl">Cidade</label><input class="fi" id="c-cidade"></div><div class="fg"><label class="fl">UF</label><input class="fi" id="c-uf" maxlength="2"></div></div>
-    <div class="fg"><label class="fl">Unidades</label><input class="fi" id="c-unid" type="number"></div>
+    <div class="fg">
+      <label class="fl">CNPJ <span style="color:var(--green3);font-weight:normal;cursor:pointer" onclick="buscarCNPJ('c')">(buscar automaticamente)</span></label>
+      <input class="fi" id="c-cnpj" placeholder="00.000.000/0001-00" oninput="if(this.value.replace(/\D/g,'').length===14)buscarCNPJ('c')">
+      <div class="cnpj-loading" id="c-cnpj-loading"><span class="sp"></span> Buscando...</div>
+      <div class="cnpj-ok" id="c-cnpj-ok"><i class="ti ti-check"></i> Dados preenchidos</div>
+    </div>
+    <div class="fg"><label class="fl">Nome do condomínio</label><input class="fi" id="c-nome" placeholder="Residencial das Flores"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Cidade</label><input class="fi" id="c-cidade" placeholder="São Paulo"></div>
+      <div class="fg"><label class="fl">UF</label><input class="fi" id="c-uf" maxlength="2" placeholder="SP"></div>
+    </div>
+    <div class="fg"><label class="fl">Endereço</label><input class="fi" id="c-end" placeholder="Av. Paulista, 1000"></div>
+    <div class="fg"><label class="fl">CEP</label><input class="fi" id="c-cep" placeholder="00000-000"></div>
+    <div class="fg"><label class="fl">Total de unidades</label><input class="fi" id="c-unid" type="number" placeholder="48"></div>
   </div>
   <div class="mf"><button class="btn" onclick="closeM('m-condo')">Cancelar</button><button class="btn btnp" onclick="doCreateCondo()"><i class="ti ti-plus"></i>Criar</button></div>
 </div></div>
@@ -648,10 +685,7 @@ async function dashSuperAdmin(){
   </div>
   <div class="card" style="margin-top:4px">
     <div class="ch"><i class="ti ti-map-pin" style="margin-right:5px"></i>Mapa <span class="badge bb" style="margin-left:4px"><span class="dot" style="background:#58a6ff"></span>Administradoras</span> <span class="badge bg" style="margin-left:4px"><span class="dot dg"></span>Condomínios</span></div>
-    <div style="position:relative;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;height:260px;background:var(--bg3)">
-      <svg id="map1" width="100%" height="260" viewBox="0 0 680 260"></svg>
-      <div class="maptip" id="maptip1"></div>
-    </div>
+<div id="map1" class="map-wrap" style="height:280px"></div>
   </div>`;
 
   const top=d.administradoras.slice(0,6);
@@ -669,7 +703,7 @@ async function dashSuperAdmin(){
     <td><button class="btn btns" style="font-size:10px;padding:4px 8px" onclick="entrarContexto('${a.id}','${a.nome.replace(/'/g,"\\'")}')"><i class="ti ti-login"></i>Entrar</button></td>
   </tr>`).join('');
 
-  drawMap('map1','maptip1',d.administradoras.map((a,i)=>({label:a.nome,city:'Administradora',type:'adm',idx:i})));
+  drawMap('map1','maptip1',d.administradoras.map((a,i)=>({label:a.nome,city:(a.cidade&&a.estado?a.cidade+'/'+a.estado:'Administradora'),type:'adm',idx:i,lat:a.lat,lng:a.lng,state:a.estado})));
 }
 
 async function entrarContexto(tenantId,nome){
@@ -741,10 +775,7 @@ async function dashAdm(){
   </div>
   <div class="card" style="margin-top:4px">
     <div class="ch"><i class="ti ti-map-pin" style="margin-right:5px"></i>Localização <span class="badge bg" style="margin-left:4px"><span class="dot dg"></span>Condomínios</span></div>
-    <div style="position:relative;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;height:240px;background:var(--bg3)">
-      <svg id="map2" width="100%" height="240" viewBox="0 0 680 240"></svg>
-      <div class="maptip" id="maptip2"></div>
-    </div>
+<div id="map2" class="map-wrap" style="height:260px"></div>
   </div>`;
 
   const cs=d.condominios.filter(c=>c.saldo>0).slice(0,8);
@@ -765,7 +796,7 @@ async function dashAdm(){
     <td><button class="btn" style="font-size:10px;padding:4px 8px" onclick="dashCondo('${c.id}')"><i class="ti ti-chart-bar"></i>Dashboard</button></td>
   </tr>`).join('');
 
-  drawMap('map2','maptip2',d.condominios.map((c,i)=>({label:c.nome,city:`${c.cidade||'?'} · ${c.total_unidades} unid.`,type:'condo',idx:i})));
+  drawMap('map2','maptip2',d.condominios.map((c,i)=>({label:c.nome,city:`${c.cidade||'?'} · ${c.total_unidades} unid.`,type:'condo',idx:i,lat:c.lat,lng:c.lng,state:c.estado})));
 }
 
 async function dashCondo(condoId){
@@ -1036,14 +1067,38 @@ async function doCreateUser(){
 async function doCreateCondo(){
   const tid=ctx?ctx.tenantId:user.tenant_id;
   try{
-    await api('POST',`/tenants/${tid}/condominios`,{nome:document.getElementById('c-nome').value,cnpj:document.getElementById('c-cnpj').value,cidade:document.getElementById('c-cidade').value,estado:document.getElementById('c-uf').value,total_unidades:parseInt(document.getElementById('c-unid').value)||0});
+    const geo=window._geocode_c;
+    const d=await api('POST',`/tenants/${tid}/condominios`,{
+      nome:document.getElementById('c-nome').value,
+      cnpj:document.getElementById('c-cnpj').value,
+      cidade:document.getElementById('c-cidade').value,
+      estado:document.getElementById('c-uf').value,
+      total_unidades:parseInt(document.getElementById('c-unid').value)||0,
+      endereco:document.getElementById('c-end')?.value||'',
+      cep:document.getElementById('c-cep')?.value||'',
+      lat:geo?.lat||null,lng:geo?.lng||null
+    });
+    // Salva coordenadas
+    if(geo?.lat){await api('PATCH',`/tenants/${tid}/condominios/${d.id}/endereco`,{lat:geo.lat,lng:geo.lng,endereco:document.getElementById('c-end')?.value||'',cidade:document.getElementById('c-cidade').value,estado:document.getElementById('c-uf').value,cep:document.getElementById('c-cep')?.value||''}).catch(()=>{});}
+    window._geocode_c=null;
     closeM('m-condo');toast('Condomínio criado!','success');loadCondos();
   }catch(ex){toast(ex.message,'error');}
 }
 
 async function doCreateTenant(){
   try{
-    await api('POST','/tenants',{nome:document.getElementById('t-nome').value,cnpj:document.getElementById('t-cnpj').value,email:document.getElementById('t-email').value});
+    const d=await api('POST','/tenants',{nome:document.getElementById('t-nome').value,cnpj:document.getElementById('t-cnpj').value,email:document.getElementById('t-email').value});
+    // Salva endereço e coordenadas
+    const geo=window._geocode_t;
+    const endBody={
+      endereco:document.getElementById('t-end')?.value||'',
+      cidade:document.getElementById('t-cidade')?.value||'',
+      estado:document.getElementById('t-uf')?.value||'',
+      cep:document.getElementById('t-cep')?.value||'',
+      lat:geo?.lat||null,lng:geo?.lng||null
+    };
+    if(endBody.cidade||endBody.lat)await api('PATCH',`/tenants/${d.id}/endereco`,endBody).catch(()=>{});
+    window._geocode_t=null;
     closeM('m-tenant');toast('Administradora criada!','success');loadAdms();
   }catch(ex){toast(ex.message,'error');}
 }
@@ -1073,35 +1128,100 @@ function legHTML(items){return items.map(([c,l])=>`<span><span class="ld" style=
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function mkChart(id,cfg){destroyChart(id);charts[id]=new Chart(id,cfg);return charts[id];}
 
-// ── MAPA ──────────────────────────────────────────────────────
-const brPts=[[-46.6,-23.5],[-43.2,-22.9],[-47.1,-22.9],[-40.3,-20.3],[-51.2,-30.0],[-38.5,-3.7],[-34.9,-8.1],[-44.3,-2.5],[-38.5,-13.0],[-49.3,-26.9],[-48.5,-27.6],[-46.9,-23.7]];
-function drawMap(svgId,tipId,pins){
-  const svg=d3.select('#'+svgId);
-  if(!svg.node())return;
-  const W=680,H=parseInt(svg.attr('height'));
-  const tip=document.getElementById(tipId);
-  d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(world=>{
-    const feat=topojson.feature(world,world.objects.countries).features;
-    const br=feat.filter(f=>f.id==='076');
-    const proj=d3.geoMercator().fitSize([W,H],{type:'FeatureCollection',features:br});
-    const path=d3.geoPath(proj);
-    svg.append('g').selectAll('path').data(feat).join('path')
-      .attr('d',path)
-      .attr('fill',d=>d.id==='076'?(isDark?'#21262d':'#e0ede5'):(isDark?'#161b22':'#f0f0f0'))
-      .attr('stroke',isDark?'rgba(255,255,255,.1)':'rgba(0,0,0,.1)')
-      .attr('stroke-width','0.5');
-    pins.forEach((p,i)=>{
-      const pt=brPts[p.idx%brPts.length];
-      const [px,py]=proj([pt[0]+(Math.random()-.5)*0.8,pt[1]+(Math.random()-.5)*0.8]);
-      if(!px||!py||isNaN(px)||isNaN(py))return;
-      const g=svg.append('g').attr('transform',`translate(${px},${py})`).style('cursor','pointer');
-      g.append('circle').attr('r',p.type==='adm'?7:5).attr('fill',p.type==='adm'?'#58a6ff':'#4ade80').attr('stroke',isDark?'#0d1117':'white').attr('stroke-width',1.5).attr('opacity',0.9);
-      g.on('mouseover',()=>{tip.style.display='block';tip.style.left=(px+10)+'px';tip.style.top=(py-28)+'px';tip.innerHTML=`<b>${p.label}</b><br>${p.city}`;})
-       .on('mouseout',()=>tip.style.display='none');
+// ── MAPA LEAFLET ─────────────────────────────────────────────
+const leafletMaps={};
+const BR_CENTER=[-14.2,-51.9],BR_ZOOM=4;
+
+function initMap(divId,center,zoom){
+  if(leafletMaps[divId]){leafletMaps[divId].remove();delete leafletMaps[divId];}
+  const el=document.getElementById(divId);
+  if(!el)return null;
+  const m=L.map(divId,{center:center||BR_CENTER,zoom:zoom||BR_ZOOM,zoomControl:true});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CARTO',maxZoom:18,subdomains:'abcd'
+  }).addTo(m);
+  leafletMaps[divId]=m;
+  return m;
+}
+
+function drawMap(divId,_tipId,pins){
+  const el=document.getElementById(divId);
+  if(!el)return;
+  setTimeout(()=>{
+    const m=initMap(divId);
+    if(!m)return;
+    const bounds=[];
+    // Posições fixas por estado para fallback quando não tem lat/lng
+    const statePts={SP:[-23.5,-46.6],RJ:[-22.9,-43.2],MG:[-19.9,-43.9],RS:[-30.0,-51.2],PR:[-25.4,-49.3],SC:[-27.6,-48.5],BA:[-12.9,-38.5],CE:[-3.7,-38.5],PE:[-8.1,-34.9],AM:[-3.1,-60.0],PA:[-1.4,-48.5],GO:[-16.7,-49.3],DF:[-15.8,-47.9],MT:[-12.6,-55.9],MS:[-20.4,-54.6],ES:[-20.3,-40.3],RN:[-5.8,-35.2],PB:[-7.1,-34.8],AL:[-9.7,-35.7],SE:[-10.9,-37.0],PI:[-5.1,-42.8],MA:[-2.5,-44.3],TO:[-10.2,-48.3],RO:[-8.8,-63.9],AC:[-9.0,-70.8],RR:[2.8,-60.7],AP:[0.9,-52.0],default:[-15.8,-47.9]};
+    pins.forEach(p=>{
+      let lat=p.lat,lng=p.lng;
+      if(!lat||!lng){
+        const sp=statePts[p.state]||statePts.default;
+        lat=sp[0]+(Math.random()-.5)*0.5;
+        lng=sp[1]+(Math.random()-.5)*0.5;
+      }
+      const color=p.type==='adm'?'#58a6ff':'#4ade80';
+      const size=p.type==='adm'?12:9;
+      const icon=L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(0,0,0,.5);box-shadow:0 0 6px ${color}66"></div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
+      const mk=L.marker([lat,lng],{icon}).addTo(m);
+      mk.bindPopup(`<b>${p.label}</b><br>${p.city||''}`);
+      bounds.push([lat,lng]);
     });
-  }).catch(()=>{
-    svg.append('text').attr('x',W/2).attr('y',H/2).attr('text-anchor','middle').attr('fill',isDark?'#8b949e':'#666').attr('font-size',12).text('Mapa requer conexão');
-  });
+    if(bounds.length>1)m.fitBounds(bounds,{padding:[30,30]});
+    else if(bounds.length===1)m.setView(bounds[0],12);
+  },100);
+}
+
+// ── CNPJ AUTO-PREENCHIMENTO ───────────────────────────────────
+const cnpjDebounce={};
+async function buscarCNPJ(prefix){
+  const cnpjEl=document.getElementById(prefix+'-cnpj');
+  if(!cnpjEl)return;
+  const cnpj=cnpjEl.value.replace(/\D/g,'');
+  if(cnpj.length!==14)return;
+  clearTimeout(cnpjDebounce[prefix]);
+  cnpjDebounce[prefix]=setTimeout(async()=>{
+    const loading=document.getElementById(prefix+'-cnpj-loading');
+    const ok=document.getElementById(prefix+'-cnpj-ok');
+    if(loading)loading.style.display='block';
+    if(ok)ok.style.display='none';
+    try{
+      const d=await api('GET',`/cnpj/${cnpj}`);
+      // Preenche campos comuns
+      const fields={
+        nome:d.nome||d.fantasia,
+        email:d.email,
+        cidade:d.municipio,
+        uf:d.uf,
+        end:d.endereco_completo,
+        cep:d.cep,
+      };
+      Object.entries(fields).forEach(([k,v])=>{
+        const el=document.getElementById(prefix+'-'+k);
+        if(el&&v&&!el.value)el.value=v;
+      });
+      if(loading)loading.style.display='none';
+      if(ok)ok.style.display='block';
+      // Auto-geocodifica
+      if(d.municipio&&d.uf){
+        geocodificarEndereco(d.endereco_completo||`${d.municipio},${d.uf},Brasil`,prefix);
+      }
+    }catch(ex){
+      if(loading)loading.style.display='none';
+      toast('CNPJ não encontrado na Receita Federal','error');
+    }
+  },400);
+}
+
+async function geocodificarEndereco(endereco,prefix){
+  try{
+    const d=await api('GET',`/geocode?endereco=${encodeURIComponent(endereco)}`);
+    if(d.found&&d.lat&&d.lng){
+      if(prefix==='t'||prefix==='c'){
+        window['_geocode_'+prefix]={lat:d.lat,lng:d.lng};
+      }
+    }
+  }catch(ex){}
 }
 
 // ── INIT ──────────────────────────────────────────────────────
