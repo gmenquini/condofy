@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Condofy — ERP para Condomínios</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;
+  --border:#30363d;--border2:#444c56;
+  --green:#1a6b4a;--green2:#2d9065;--green3:#4ade80;--green-glow:#1a6b4a44;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --red:#f85149;--yellow:#e3b341;--blue:#58a6ff;
+  --font:'Sora',sans-serif;--mono:'DM Mono',monospace;
+  --radius:8px;--radius-lg:12px;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden}
+
+/* ── LAYOUT ── */
+.app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:56px 1fr;height:100vh}
+.topbar{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;z-index:10}
+.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:12px 0;overflow-y:auto;display:flex;flex-direction:column}
+.main{overflow-y:auto;padding:24px;background:var(--bg)}
+
+/* ── TOPBAR ── */
+.logo{display:flex;align-items:center;gap:10px;margin-right:auto}
+.logo-mark{width:32px;height:32px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:14px;color:#fff;box-shadow:0 0 16px var(--green-glow)}
+.logo-text{font-size:16px;font-weight:600;letter-spacing:-0.3px}
+.logo-badge{font-size:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:2px 8px;border-radius:20px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 4px;cursor:pointer;font-size:13px}
+.avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--green),var(--green2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+.role-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:500}
+.role-badge.super{background:#1a3a2a;color:var(--green3);border:1px solid #2d9065}
+.role-badge.admin{background:#1a2a3a;color:var(--blue);border:1px solid #1f4068}
+.role-badge.gerente{background:#2a2a1a;color:var(--yellow);border:1px solid #4a3a00}
+.role-badge.operador{background:#2a1a1a;color:#ff9580;border:1px solid #4a1a00}
+
+/* ── SIDEBAR ── */
+.nav-section{padding:0 8px;margin-bottom:4px}
+.nav-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:1px;padding:8px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;font-size:13px;color:var(--text2);transition:all .15s;border:1px solid transparent}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:linear-gradient(135deg,#0d2a1a,#0d2a1a);color:var(--green3);border-color:#1a3a2a}
+.nav-item i{font-size:16px;width:18px;text-align:center}
+.nav-divider{height:1px;background:var(--border);margin:8px 12px}
+.nav-bottom{margin-top:auto;padding:0 8px}
+
+/* ── CARDS & LAYOUT ── */
+.page{display:none}.page.active{display:block}
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px}
+.page-title{font-size:20px;font-weight:600;letter-spacing:-0.3px}
+.page-sub{font-size:12px;color:var(--text2);margin-top:3px}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.metric{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;transition:border-color .2s}
+.metric:hover{border-color:var(--border2)}
+.metric-label{font-size:11px;color:var(--text2);font-weight:500;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
+.metric-value{font-size:24px;font-weight:600;font-family:var(--mono);letter-spacing:-1px}
+.metric-delta{font-size:11px;margin-top:4px;color:var(--text2)}
+.metric-delta.up{color:var(--green3)}.metric-delta.down{color:var(--red)}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:16px}
+.card-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:600}
+.card-body{padding:0}
+
+/* ── TABLE ── */
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:10px 18px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;border-bottom:1px solid var(--border);background:var(--bg3)}
+td{padding:12px 18px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#ffffff05}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:500}
+.badge-green{background:#0d2a1a;color:var(--green3);border:1px solid #1a3a2a}
+.badge-yellow{background:#2a2000;color:var(--yellow);border:1px solid #3a3000}
+.badge-red{background:#2a0d0d;color:var(--red);border:1px solid #3a1a1a}
+.badge-blue{background:#0d1a2a;color:var(--blue);border:1px solid #1a2a3a}
+.badge-gray{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
+.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.dot-green{background:var(--green3)}.dot-yellow{background:var(--yellow)}.dot-red{background:var(--red)}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--radius);font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);transition:all .15s;font-family:var(--font)}
+.btn:hover{background:var(--bg2);border-color:var(--border2)}
+.btn-primary{background:var(--green);border-color:var(--green);color:#fff}
+.btn-primary:hover{background:var(--green2);border-color:var(--green2)}
+.btn-danger{background:#2a0d0d;border-color:#3a1a1a;color:var(--red)}
+.btn-sm{padding:5px 10px;font-size:11px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── FORMS ── */
+.form-group{margin-bottom:14px}
+.form-label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:5px}
+.form-input{width:100%;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:var(--font);color:var(--text);outline:none;transition:border-color .15s}
+.form-input:focus{border-color:var(--green2)}
+.form-input::placeholder{color:var(--text3)}
+select.form-input option{background:var(--bg3)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);width:480px;max-width:90vw;max-height:90vh;overflow-y:auto}
+.modal-header{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:15px;font-weight:600}
+.modal-body{padding:18px 20px}
+.modal-footer{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+
+/* ── LOGIN ── */
+#login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200}
+.login-box{width:380px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:32px;box-shadow:0 0 80px #1a6b4a22}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo-mark{width:52px;height:52px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:22px;color:#fff;margin:0 auto 10px;box-shadow:0 0 32px var(--green-glow)}
+.login-title{font-size:22px;font-weight:600;letter-spacing:-0.5px}
+.login-sub{font-size:12px;color:var(--text2);margin-top:4px}
+.login-error{background:#2a0d0d;border:1px solid #3a1a1a;color:var(--red);padding:10px 12px;border-radius:var(--radius);font-size:12px;margin-bottom:12px;display:none}
+
+/* ── CONCILIAÇÃO ── */
+.concil-filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.filter-pill{padding:5px 14px;border-radius:20px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:all .15s;font-family:var(--font)}
+.filter-pill:hover{background:var(--bg3)}
+.filter-pill.active{background:var(--green);border-color:var(--green);color:#fff}
+.amount{font-family:var(--mono);font-size:12px}
+.amount.credit{color:var(--green3)}.amount.debit{color:var(--red)}
+.progress-bar{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;width:80px;display:inline-block}
+.progress-fill{height:100%;background:var(--green3);border-radius:2px}
+
+/* ── TOAST ── */
+.toast-container{position:fixed;bottom:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+.toast{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;font-size:12px;display:flex;align-items:center;gap:10px;min-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:slideIn .2s ease}
+.toast.success{border-left:3px solid var(--green3)}.toast.error{border-left:3px solid var(--red)}.toast.info{border-left:3px solid var(--blue)}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* ── LOADING ── */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--green3);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-overlay{position:absolute;inset:0;background:var(--bg2)cc;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-lg)}
+
+/* ── EMPTY ── */
+.empty{text-align:center;padding:48px 20px;color:var(--text2)}
+.empty i{font-size:36px;display:block;margin-bottom:10px;color:var(--text3)}
+.empty p{font-size:13px}
+
+/* ── MISC ── */
+.mono{font-family:var(--mono);font-size:11px;color:var(--text2)}
+.truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.sep{height:1px;background:var(--border);margin:16px 0}
+.tag{font-family:var(--mono);font-size:10px;background:var(--bg3);border:1px solid var(--border);padding:2px 7px;border-radius:4px;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-mark">C</div>
+      <div class="login-title">Condofy</div>
+      <div class="login-sub">ERP para Administradoras de Condomínios</div>
+    </div>
+    <div class="login-error" id="login-error"></div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input class="form-input" type="email" id="login-email" placeholder="seu@email.com" value="admin@condofy.com.br">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input class="form-input" type="password" id="login-senha" placeholder="••••••••" value="Condofy@2026!">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="fazerLogin()" id="btn-login">
+      <i class="ti ti-login"></i> Entrar
+    </button>
+    <div style="margin-top:16px;text-align:center">
+      <span style="font-size:11px;color:var(--text3)">Não tem conta? </span>
+      <span style="font-size:11px;color:var(--green3);cursor:pointer" onclick="showModal('modal-registro')">Cadastrar administradora</span>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app" style="display:none">
+  <div class="topbar">
+    <div class="logo">
+      <div class="logo-mark">C</div>
+      <span class="logo-text">Condofy</span>
+      <span class="logo-badge" id="topbar-tenant">—</span>
+    </div>
+    <div class="topbar-right">
+      <span id="topbar-role-badge" class="role-badge"></span>
+      <div class="user-chip" onclick="showModal('modal-perfil')">
+        <div class="avatar" id="topbar-avatar">—</div>
+        <span id="topbar-nome" style="font-size:12px">—</span>
+        <i class="ti ti-chevron-down" style="font-size:12px;color:var(--text3)"></i>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Principal</div>
+      <div class="nav-item active" onclick="nav('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">
+      <div class="nav-label">Condomínios</div>
+      <div class="nav-item" onclick="nav('condominios')"><i class="ti ti-building"></i>Condomínios</div>
+      <div class="nav-item" onclick="nav('contas')"><i class="ti ti-credit-card"></i>Contas bancárias</div>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section">
+      <div class="nav-label">Financeiro</div>
+      <div class="nav-item" onclick="nav('conciliacao')"><i class="ti ti-arrows-exchange"></i>Conciliação</div>
+      <div class="nav-item" onclick="nav('lancamentos')"><i class="ti ti-list"></i>Lançamentos</div>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-section" id="nav-admin" style="display:none">
+      <div class="nav-label">Administração</div>
+      <div class="nav-item" onclick="nav('usuarios')"><i class="ti ti-users"></i>Usuários</div>
+      <div class="nav-item" onclick="nav('tenants')" id="nav-tenants" style="display:none"><i class="ti ti-building-bank"></i>Administradoras</div>
+    </div>
+    <div class="nav-bottom">
+      <div class="nav-divider"></div>
+      <div class="nav-item" onclick="fazerLogout()"><i class="ti ti-logout"></i>Sair</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div><div class="page-title">Dashboard</div><div class="page-sub" id="dash-sub">Carregando...</div></div>
+        <button class="btn btn-primary" onclick="nav('conciliacao')"><i class="ti ti-arrows-exchange"></i>Conciliar agora</button>
+      </div>
+      <div class="metrics" id="dash-metrics">
+        <div class="metric"><div class="metric-label">Condomínios</div><div class="metric-value" id="m-condominios">—</div></div>
+        <div class="metric"><div class="metric-label">Contas bancárias</div><div class="metric-value" id="m-contas">—</div></div>
+        <div class="metric"><div class="metric-label">Transações pendentes</div><div class="metric-value" id="m-pendentes" style="color:var(--yellow)">—</div></div>
+        <div class="metric"><div class="metric-label">Usuários ativos</div><div class="metric-value" id="m-usuarios">—</div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Condomínios</span><button class="btn btn-sm" onclick="nav('condominios')">Ver todos</button></div>
+        <div class="card-body"><table><thead><tr><th>Nome</th><th>Cidade</th><th>Unidades</th><th>Status</th></tr></thead><tbody id="dash-condominios-tbody"><tr><td colspan="4" class="empty"><i class="ti ti-loader"></i>Carregando...</td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- CONDOMÍNIOS -->
+    <div class="page" id="page-condominios">
+      <div class="page-header">
+        <div><div class="page-title">Condomínios</div><div class="page-sub" id="condominios-sub">—</div></div>
+        <button class="btn btn-primary" onclick="showModal('modal-novo-condo')"><i class="ti ti-plus"></i>Novo condomínio</button>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <table><thead><tr><th>Nome</th><th>Cidade / UF</th><th>CNPJ</th><th>Unidades</th><th>Ações</th></tr></thead>
+          <tbody id="condominios-tbody"><tr><td colspan="5"><div class="empty"><i class="ti ti-building"></i><p>Nenhum condomínio cadastrado</p></div></td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTAS -->
+    <div class="page" id="page-contas">
+      <div class="page-header">
+        <div><div class="page-title">Contas Bancárias</div><div class="page-sub">Conectadas via Pluggy Open Finance</div></div>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <table><thead><tr><th>Condomínio</th><th>Banco</th><th>Agência / Conta</th><th>Saldo</th><th>Última sync</th><th>Status</th></tr></thead>
+          <tbody id="contas-tbody"><tr><td colspan="6"><div class="empty"><i class="ti ti-credit-card"></i><p>Nenhuma conta conectada</p></div></td></tr></tbody></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONCILIAÇÃO -->
+    <div class="page" id="page-conciliacao">
+      <div class="page-header">
+        <div><div class="page-title">Conciliação Bancária</div><div class="page-sub" id="concil-sub">Selecione um condomínio</div></div>
+        <div style="display:flex;gap:8px">
+          <select class="form-input" id="concil-select-condo" onchange="carregarTransacoes()" style="width:200px;font-size:12px">
+            <option value="">— Selecionar condomínio —</option>
+          </select>
+          <button class="btn btn-primary" onclick="executarConciliacao()" id="btn-conciliar"><i class="ti ti-magic"></i>Conciliar automático</button>
+        </div>
+      </div>
+      <div class="metrics" style="grid-template-columns:repeat(4,1fr)">
+        <div class="metric"><div class="metric-label">Total</div><div class="metric-value" id="cm-total">—</div></div>
+        <div class="metric"><div class="metric-label">Conciliadas</div><div class="metric-value" id="cm-concil" style="color:var(--green3)">—</div></div>
+        <div class="metric"><div class="metric-label">Pendentes</div><div class="metric-value" id="cm-pend" style="color:var(--yellow)">—</div></div>
+        <div class="metric"><div class="metric-label">Divergências</div><div class="metric-value" id="cm-div" style="color:var(--red)">—</div></div>
+      </div>
+      <div class="concil-filters">
+        <button class="filter-pill active" onclick="setConcilFilter(this,'')">Todas</button>
+        <button class="filter-pill" onclick="setConcilFilter(this,'pendente')">Pendentes</button>
+        <button class="filter-pill" onclick="setConcilFilter(this,'conciliada')">Conciliadas</button>
+        <button class="filter-pill" onclick="setConcilFilter(this,'divergencia')">Divergências</button>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Transações</span><span class="mono" id="concil-count">0 transações</span></div>
+        <div class="card-body"><table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead><tbody id="concil-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- LANÇAMENTOS -->
+    <div class="page" id="page-lancamentos">
+      <div class="page-header">
+        <div><div class="page-title">Lançamentos</div><div class="page-sub">Receitas e despesas</div></div>
+        <div style="display:flex;gap:8px">
+          <select class="form-input" id="lanc-select-condo" onchange="carregarLancamentos()" style="width:200px;font-size:12px">
+            <option value="">— Selecionar condomínio —</option>
+          </select>
+          <button class="btn btn-primary" onclick="showModal('modal-novo-lanc')"><i class="ti ti-plus"></i>Novo lançamento</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-body"><table><thead><tr><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody id="lanc-tbody"><tr><td colspan="5"><div class="empty"><i class="ti ti-list"></i><p>Selecione um condomínio</p></div></td></tr></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- USUÁRIOS -->
+    <div class="page" id="page-usuarios">
+      <div class="page-header">
+        <div><div class="page-title">Usuários</div><div class="page-sub" id="usuarios-sub">—</div></div>
+        <button class="btn btn-primary" onclick="showModal('modal-novo-usuario')"><i class="ti ti-plus"></i>Novo usuário</button>
+      </div>
+      <div class="card">
+        <div class="card-body"><table><thead><tr><th>Nome</th><th>Email</th><th>Role</th><th>Status</th></tr></thead><tbody id="usuarios-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- TENANTS (super admin) -->
+    <div class="page" id="page-tenants">
+      <div class="page-header">
+        <div><div class="page-title">Administradoras</div><div class="page-sub" id="tenants-sub">—</div></div>
+        <button class="btn btn-primary" onclick="showModal('modal-novo-tenant')"><i class="ti ti-plus"></i>Nova administradora</button>
+      </div>
+      <div class="card">
+        <div class="card-body"><table><thead><tr><th>Nome</th><th>CNPJ</th><th>Status</th></tr></thead><tbody id="tenants-tbody"></tbody></table></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAIS -->
+<div id="modal-registro" class="modal-overlay" style="display:none" onclick="closeModal('modal-registro')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><span class="modal-title">Cadastrar administradora</span><button class="btn btn-sm" onclick="closeModal('modal-registro')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Seu nome</label><input class="form-input" id="reg-nome" placeholder="João Silva"></div>
+        <div class="form-group"><label class="form-label">Nome da empresa</label><input class="form-input" id="reg-empresa" placeholder="Administradora Silva"></div>
+      </div>
+      <div class="form-group"><label class="form-label">CNPJ</label><input class="form-input" id="reg-cnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="reg-email" type="email" placeholder="joao@silva.com.br"></div>
+      <div class="form-group"><label class="form-label">Senha</label><input class="form-input" id="reg-senha" type="password" placeholder="Mínimo 8 caracteres"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-registro')">Cancelar</button><button class="btn btn-primary" onclick="registrarAdministradora()"><i class="ti ti-check"></i>Cadastrar</button></div>
+  </div>
+</div>
+
+<div id="modal-novo-condo" class="modal-overlay" style="display:none" onclick="closeModal('modal-novo-condo')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><span class="modal-title">Novo condomínio</span><button class="btn btn-sm" onclick="closeModal('modal-novo-condo')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="condo-nome" placeholder="Residencial das Flores"></div>
+      <div class="form-group"><label class="form-label">CNPJ</label><input class="form-input" id="condo-cnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Cidade</label><input class="form-input" id="condo-cidade" placeholder="São Paulo"></div>
+        <div class="form-group"><label class="form-label">Estado</label><input class="form-input" id="condo-estado" placeholder="SP" maxlength="2"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Total de unidades</label><input class="form-input" id="condo-unidades" type="number" placeholder="48"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-novo-condo')">Cancelar</button><button class="btn btn-primary" onclick="criarCondominio()"><i class="ti ti-plus"></i>Criar</button></div>
+  </div>
+</div>
+
+<div id="modal-novo-usuario" class="modal-overlay" style="display:none" onclick="closeModal('modal-novo-usuario')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><span class="modal-title">Novo usuário</span><button class="btn btn-sm" onclick="closeModal('modal-novo-usuario')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome</label><input class="form-input" id="usr-nome" placeholder="Maria Silva"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="usr-email" type="email" placeholder="maria@empresa.com.br"></div>
+      <div class="form-group"><label class="form-label">Senha</label><input class="form-input" id="usr-senha" type="password" placeholder="Mínimo 8 caracteres"></div>
+      <div class="form-group"><label class="form-label">Nível de acesso</label>
+        <select class="form-input" id="usr-role">
+          <option value="operador">Operador</option>
+          <option value="gerente">Gerente</option>
+          <option value="admin_tenant">Admin da Administradora</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-novo-usuario')">Cancelar</button><button class="btn btn-primary" onclick="criarUsuario()"><i class="ti ti-plus"></i>Criar</button></div>
+  </div>
+</div>
+
+<div id="modal-novo-tenant" class="modal-overlay" style="display:none" onclick="closeModal('modal-novo-tenant')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><span class="modal-title">Nova administradora</span><button class="btn btn-sm" onclick="closeModal('modal-novo-tenant')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Nome da empresa</label><input class="form-input" id="t-nome" placeholder="Administradora Silva Ltda"></div>
+      <div class="form-group"><label class="form-label">CNPJ</label><input class="form-input" id="t-cnpj" placeholder="00.000.000/0001-00"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="t-email" type="email" placeholder="contato@silva.com.br"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-novo-tenant')">Cancelar</button><button class="btn btn-primary" onclick="criarTenant()"><i class="ti ti-plus"></i>Criar</button></div>
+  </div>
+</div>
+
+<div id="modal-novo-lanc" class="modal-overlay" style="display:none" onclick="closeModal('modal-novo-lanc')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><span class="modal-title">Novo lançamento</span><button class="btn btn-sm" onclick="closeModal('modal-novo-lanc')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Descrição</label><input class="form-input" id="l-desc" placeholder="Taxa condominial Apto 101"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Tipo</label>
+          <select class="form-input" id="l-tipo"><option value="receita">Receita</option><option value="despesa">Despesa</option><option value="imposto">Imposto (DARF/DAS)</option></select>
+        </div>
+        <div class="form-group"><label class="form-label">Valor (R$)</label><input class="form-input" id="l-valor" type="number" step="0.01" placeholder="850.00"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Vencimento</label><input class="form-input" id="l-venc" type="date"></div>
+        <div class="form-group"><label class="form-label">Mês referência</label><input class="form-input" id="l-mes" type="month"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('modal-novo-lanc')">Cancelar</button><button class="btn btn-primary" onclick="criarLancamento()"><i class="ti ti-plus"></i>Criar</button></div>
+  </div>
+</div>
+
+<div id="modal-perfil" class="modal-overlay" style="display:none" onclick="closeModal('modal-perfil')">
+  <div class="modal" style="width:360px" onclick="event.stopPropagation()">
+    <div class="modal-header"><span class="modal-title">Meu perfil</span><button class="btn btn-sm" onclick="closeModal('modal-perfil')"><i class="ti ti-x"></i></button></div>
+    <div class="modal-body">
+      <div style="text-align:center;margin-bottom:16px">
+        <div class="avatar" style="width:52px;height:52px;font-size:20px;margin:0 auto 8px" id="perfil-avatar">—</div>
+        <div style="font-weight:600" id="perfil-nome">—</div>
+        <div style="font-size:12px;color:var(--text2)" id="perfil-email">—</div>
+        <div style="margin-top:6px" id="perfil-role"></div>
+      </div>
+      <div class="sep"></div>
+      <div class="form-group"><label class="form-label">Nova senha</label><input class="form-input" id="nova-senha" type="password" placeholder="Deixe em branco para manter"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="fazerLogout()"><i class="ti ti-logout"></i>Sair</button>
+      <button class="btn btn-primary" onclick="trocarSenha()"><i class="ti ti-check"></i>Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+const API = 'https://condofy-lvo3.onrender.com';
+let token = localStorage.getItem('condofy_token');
+let usuario = JSON.parse(localStorage.getItem('condofy_usuario') || 'null');
+let condominios = [];
+let concilFilter = '';
+
+// ── API helper ────────────────────────────────────────────────
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: {'Content-Type': 'application/json', ...(token ? {'Authorization': `Bearer ${token}`} : {})}
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API + path, opts);
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.detail || 'Erro na requisição');
+  return data;
+}
+
+// ── Toast ─────────────────────────────────────────────────────
+function toast(msg, type = 'info') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  const icon = type === 'success' ? 'ti-check' : type === 'error' ? 'ti-x' : 'ti-info-circle';
+  t.innerHTML = `<i class="ti ${icon}"></i><span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ── Auth ──────────────────────────────────────────────────────
+async function fazerLogin() {
+  const email = document.getElementById('login-email').value;
+  const senha = document.getElementById('login-senha').value;
+  const btn = document.getElementById('btn-login');
+  const err = document.getElementById('login-error');
+  err.style.display = 'none';
+  btn.innerHTML = '<span class="spinner"></span> Entrando...';
+  btn.disabled = true;
+  try {
+    const data = await api('POST', '/auth/login', {email, senha});
+    token = data.access_token;
+    usuario = data.usuario;
+    localStorage.setItem('condofy_token', token);
+    localStorage.setItem('condofy_usuario', JSON.stringify(usuario));
+    iniciarApp();
+  } catch(e) {
+    err.textContent = e.message;
+    err.style.display = 'block';
+  }
+  btn.innerHTML = '<i class="ti ti-login"></i> Entrar';
+  btn.disabled = false;
+}
+
+document.getElementById('login-senha').addEventListener('keydown', e => { if (e.key === 'Enter') fazerLogin(); });
+
+async function registrarAdministradora() {
+  try {
+    const data = await api('POST', '/auth/registro-administradora', {
+      nome: document.getElementById('reg-nome').value,
+      email: document.getElementById('reg-email').value,
+      senha: document.getElementById('reg-senha').value,
+      nome_empresa: document.getElementById('reg-empresa').value,
+      cnpj: document.getElementById('reg-cnpj').value,
+    });
+    token = data.access_token;
+    const me = await api('GET', '/auth/me');
+    usuario = me;
+    localStorage.setItem('condofy_token', token);
+    localStorage.setItem('condofy_usuario', JSON.stringify(usuario));
+    closeModal('modal-registro');
+    iniciarApp();
+    toast('Administradora cadastrada com sucesso!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function fazerLogout() {
+  localStorage.removeItem('condofy_token');
+  localStorage.removeItem('condofy_usuario');
+  token = null; usuario = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ── Init ──────────────────────────────────────────────────────
+async function iniciarApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'grid';
+
+  // Topbar
+  const ini = usuario.nome.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+  document.getElementById('topbar-avatar').textContent = ini;
+  document.getElementById('topbar-nome').textContent = usuario.nome.split(' ')[0];
+
+  const roleLabels = {super_admin:'Super Admin', admin_tenant:'Admin', gerente:'Gerente', operador:'Operador'};
+  const roleBadge = document.getElementById('topbar-role-badge');
+  roleBadge.textContent = roleLabels[usuario.role] || usuario.role;
+  roleBadge.className = 'role-badge ' + (usuario.role === 'super_admin' ? 'super' : usuario.role === 'admin_tenant' ? 'admin' : usuario.role === 'gerente' ? 'gerente' : 'operador');
+
+  // Mostrar nav admin
+  if (['super_admin','admin_tenant'].includes(usuario.role)) {
+    document.getElementById('nav-admin').style.display = 'block';
+  }
+  if (usuario.role === 'super_admin') {
+    document.getElementById('nav-tenants').style.display = 'flex';
+  }
+
+  // Perfil modal
+  document.getElementById('perfil-avatar').textContent = ini;
+  document.getElementById('perfil-nome').textContent = usuario.nome;
+  document.getElementById('perfil-email').textContent = usuario.email;
+  document.getElementById('perfil-role').innerHTML = `<span class="role-badge ${usuario.role === 'super_admin' ? 'super' : 'admin'}">${roleLabels[usuario.role]}</span>`;
+
+  await carregarDashboard();
+}
+
+// ── Nav ───────────────────────────────────────────────────────
+const pageLoaders = {
+  dashboard: carregarDashboard,
+  condominios: carregarCondominios,
+  contas: carregarContas,
+  conciliacao: carregarConciliacaoPage,
+  lancamentos: () => {},
+  usuarios: carregarUsuarios,
+  tenants: carregarTenants,
+};
+
+function nav(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick')?.includes(`'${page}'`)) n.classList.add('active');
+  });
+  if (pageLoaders[page]) pageLoaders[page]();
+}
+
+// ── Dashboard ─────────────────────────────────────────────────
+async function carregarDashboard() {
+  document.getElementById('dash-sub').textContent = new Date().toLocaleDateString('pt-BR', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  try {
+    const tenantId = usuario.tenant_id;
+
+    if (usuario.role === 'super_admin') {
+      document.getElementById('topbar-tenant').textContent = 'Super Admin';
+      const ts = await api('GET', '/tenants');
+      document.getElementById('m-condominios').textContent = ts.length;
+      document.getElementById('m-contas').textContent = '—';
+    } else {
+      const condos = await api('GET', `/tenants/${tenantId}/condominios`);
+      condominios = condos;
+      document.getElementById('m-condominios').textContent = condos.length;
+
+      // Popula selects de condomínio
+      ['concil-select-condo','lanc-select-condo'].forEach(id => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '<option value="">— Selecionar condomínio —</option>';
+        condos.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+      });
+
+      document.getElementById('dash-condominios-tbody').innerHTML = condos.map(c => `
+        <tr>
+          <td><b>${c.nome}</b></td>
+          <td>${c.cidade || '—'} / ${c.estado || '—'}</td>
+          <td>${c.total_unidades}</td>
+          <td><span class="badge badge-green"><span class="dot dot-green"></span>Ativo</span></td>
+        </tr>`).join('') || '<tr><td colspan="4"><div class="empty"><i class="ti ti-building"></i><p>Nenhum condomínio</p></div></td></tr>';
+    }
+
+    const usrs = await api('GET', '/usuarios');
+    document.getElementById('m-usuarios').textContent = usrs.length;
+    document.getElementById('m-pendentes').textContent = '—';
+
+    if (usuario.role !== 'super_admin') {
+      const t = await api('GET', `/tenants/${tenantId}`);
+      document.getElementById('topbar-tenant').textContent = t.nome.substring(0, 20);
+    }
+  } catch(e) { toast('Erro ao carregar dashboard: ' + e.message, 'error'); }
+}
+
+// ── Condomínios ───────────────────────────────────────────────
+async function carregarCondominios() {
+  if (!usuario.tenant_id && usuario.role !== 'super_admin') return;
+  try {
+    const tenantId = usuario.tenant_id;
+    const condos = usuario.role === 'super_admin' ? [] : await api('GET', `/tenants/${tenantId}/condominios`);
+    condominios = condos;
+    document.getElementById('condominios-sub').textContent = `${condos.length} condomínios cadastrados`;
+    document.getElementById('condominios-tbody').innerHTML = condos.map(c => `
+      <tr>
+        <td><b>${c.nome}</b></td>
+        <td>${c.cidade || '—'} / ${c.estado || '—'}</td>
+        <td class="mono">${c.cnpj || '—'}</td>
+        <td>${c.total_unidades}</td>
+        <td><button class="btn btn-sm" onclick="nav('conciliacao')"><i class="ti ti-arrows-exchange"></i>Conciliar</button></td>
+      </tr>`).join('') || '<tr><td colspan="5"><div class="empty"><i class="ti ti-building"></i><p>Nenhum condomínio</p></div></td></tr>';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function criarCondominio() {
+  try {
+    await api('POST', `/tenants/${usuario.tenant_id}/condominios`, {
+      nome: document.getElementById('condo-nome').value,
+      cnpj: document.getElementById('condo-cnpj').value,
+      cidade: document.getElementById('condo-cidade').value,
+      estado: document.getElementById('condo-estado').value,
+      total_unidades: parseInt(document.getElementById('condo-unidades').value) || 0,
+    });
+    closeModal('modal-novo-condo');
+    toast('Condomínio criado!', 'success');
+    carregarCondominios();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Contas ────────────────────────────────────────────────────
+async function carregarContas() {
+  if (!usuario.tenant_id) return;
+  try {
+    const condos = await api('GET', `/tenants/${usuario.tenant_id}/condominios`);
+    let rows = '';
+    for (const c of condos) {
+      const contas = await api('GET', `/tenants/${usuario.tenant_id}/condominios/${c.id}/contas`);
+      rows += contas.map(ct => `
+        <tr>
+          <td>${c.nome}</td>
+          <td><span class="tag">${ct.banco_nome}</span></td>
+          <td class="mono">${ct.agencia || '—'} / ${ct.conta || '—'}</td>
+          <td><span class="amount credit">${ct.saldo_atual ? 'R$ ' + ct.saldo_atual.toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—'}</span></td>
+          <td class="mono">${ct.ultima_sync ? new Date(ct.ultima_sync).toLocaleString('pt-BR') : '—'}</td>
+          <td><span class="badge ${ct.pluggy_status === 'UPDATED' ? 'badge-green' : 'badge-yellow'}"><span class="dot ${ct.pluggy_status === 'UPDATED' ? 'dot-green' : 'dot-yellow'}"></span>${ct.pluggy_status || 'Não conectado'}</span></td>
+        </tr>`).join('');
+    }
+    document.getElementById('contas-tbody').innerHTML = rows || '<tr><td colspan="6"><div class="empty"><i class="ti ti-credit-card"></i><p>Nenhuma conta conectada</p></div></td></tr>';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Conciliação ───────────────────────────────────────────────
+let todasTransacoes = [];
+
+async function carregarConciliacaoPage() {
+  if (!usuario.tenant_id) return;
+  const condos = condominios.length ? condominios : await api('GET', `/tenants/${usuario.tenant_id}/condominios`).catch(() => []);
+  condominios = condos;
+  const sel = document.getElementById('concil-select-condo');
+  sel.innerHTML = '<option value="">— Selecionar condomínio —</option>';
+  condos.forEach(c => sel.innerHTML += `<option value="${c.id}">${c.nome}</option>`);
+}
+
+async function carregarTransacoes() {
+  const condoId = document.getElementById('concil-select-condo').value;
+  if (!condoId) return;
+  try {
+    todasTransacoes = await api('GET', `/tenants/${usuario.tenant_id}/condominios/${condoId}/transacoes`);
+    const condo = condominios.find(c => c.id === condoId);
+    document.getElementById('concil-sub').textContent = condo?.nome || '';
+    atualizarMetricasConcil();
+    renderTransacoes();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function atualizarMetricasConcil() {
+  const total = todasTransacoes.length;
+  const concil = todasTransacoes.filter(t => t.status_conciliacao === 'conciliada').length;
+  const pend = todasTransacoes.filter(t => t.status_conciliacao === 'pendente').length;
+  const div = todasTransacoes.filter(t => t.status_conciliacao === 'divergencia').length;
+  document.getElementById('cm-total').textContent = total;
+  document.getElementById('cm-concil').textContent = concil;
+  document.getElementById('cm-pend').textContent = pend;
+  document.getElementById('cm-div').textContent = div;
+}
+
+function renderTransacoes() {
+  const filtradas = concilFilter ? todasTransacoes.filter(t => t.status_conciliacao === concilFilter) : todasTransacoes;
+  document.getElementById('concil-count').textContent = `${filtradas.length} transações`;
+  const statusBadge = s => ({
+    conciliada: '<span class="badge badge-green"><span class="dot dot-green"></span>Conciliada</span>',
+    pendente: '<span class="badge badge-yellow"><span class="dot dot-yellow"></span>Pendente</span>',
+    divergencia: '<span class="badge badge-red"><span class="dot dot-red"></span>Divergência</span>',
+    ignorada: '<span class="badge badge-gray">Ignorada</span>',
+  }[s] || s);
+  document.getElementById('concil-tbody').innerHTML = filtradas.map(t => `
+    <tr>
+      <td class="mono">${new Date(t.data).toLocaleDateString('pt-BR')}</td>
+      <td class="truncate">${t.descricao}</td>
+      <td><span class="badge ${t.tipo === 'credito' ? 'badge-green' : 'badge-gray'}">${t.tipo === 'credito' ? 'Crédito' : 'Débito'}</span></td>
+      <td><span class="amount ${t.tipo === 'credito' ? 'credit' : 'debit'}">${t.tipo === 'debito' ? '−' : '+'}R$ ${parseFloat(t.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
+      <td>${statusBadge(t.status_conciliacao)}</td>
+      <td>${t.status_conciliacao === 'pendente' ? `<button class="btn btn-sm" onclick="conciliarManual('${t.id}')"><i class="ti ti-check"></i>Conciliar</button>` : ''}</td>
+    </tr>`).join('') || '<tr><td colspan="6"><div class="empty"><i class="ti ti-arrows-exchange"></i><p>Nenhuma transação</p></div></td></tr>';
+}
+
+function setConcilFilter(el, f) {
+  concilFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderTransacoes();
+}
+
+async function executarConciliacao() {
+  const condoId = document.getElementById('concil-select-condo').value;
+  if (!condoId) { toast('Selecione um condomínio', 'error'); return; }
+  const btn = document.getElementById('btn-conciliar');
+  btn.innerHTML = '<span class="spinner"></span>Conciliando...';
+  btn.disabled = true;
+  try {
+    const r = await api('POST', `/tenants/${usuario.tenant_id}/condominios/${condoId}/conciliar`, {});
+    toast(`✓ ${r.conciliadas} conciliadas automaticamente, ${r.pendentes} pendentes`, 'success');
+    await carregarTransacoes();
+  } catch(e) { toast(e.message, 'error'); }
+  btn.innerHTML = '<i class="ti ti-magic"></i>Conciliar automático';
+  btn.disabled = false;
+}
+
+async function conciliarManual(transacaoId) {
+  try {
+    await api('PATCH', `/tenants/${usuario.tenant_id}/transacoes/${transacaoId}/conciliar`, {observacao: 'Conciliado manualmente'});
+    toast('Transação conciliada!', 'success');
+    const i = todasTransacoes.findIndex(t => t.id === transacaoId);
+    if (i >= 0) todasTransacoes[i].status_conciliacao = 'conciliada';
+    atualizarMetricasConcil();
+    renderTransacoes();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Lançamentos ───────────────────────────────────────────────
+async function carregarLancamentos() {
+  const condoId = document.getElementById('lanc-select-condo').value;
+  if (!condoId) return;
+  document.getElementById('lanc-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px"><span class="spinner"></span></td></tr>';
+  try {
+    // Mostra vazio já que não temos endpoint de listar lançamentos ainda
+    document.getElementById('lanc-tbody').innerHTML = '<tr><td colspan="5"><div class="empty"><i class="ti ti-list"></i><p>Sem lançamentos cadastrados</p></div></td></tr>';
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function criarLancamento() {
+  const condoId = document.getElementById('lanc-select-condo').value;
+  if (!condoId) { toast('Selecione um condomínio primeiro', 'error'); return; }
+  try {
+    await api('POST', `/tenants/${usuario.tenant_id}/condominios/${condoId}/lancamentos`, {
+      descricao: document.getElementById('l-desc').value,
+      tipo: document.getElementById('l-tipo').value,
+      valor: parseFloat(document.getElementById('l-valor').value),
+      data_vencimento: document.getElementById('l-venc').value,
+      mes_referencia: document.getElementById('l-mes').value,
+    });
+    closeModal('modal-novo-lanc');
+    toast('Lançamento criado!', 'success');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Usuários ──────────────────────────────────────────────────
+async function carregarUsuarios() {
+  try {
+    const usrs = await api('GET', '/usuarios');
+    document.getElementById('usuarios-sub').textContent = `${usrs.length} usuários`;
+    const roleLabels = {super_admin:'Super Admin', admin_tenant:'Admin', gerente:'Gerente', operador:'Operador'};
+    const roleClass = {super_admin:'super', admin_tenant:'admin', gerente:'gerente', operador:'operador'};
+    document.getElementById('usuarios-tbody').innerHTML = usrs.map(u => `
+      <tr>
+        <td><b>${u.nome}</b></td>
+        <td class="mono">${u.email}</td>
+        <td><span class="role-badge ${roleClass[u.role]}">${roleLabels[u.role]}</span></td>
+        <td><span class="badge ${u.ativo ? 'badge-green' : 'badge-gray'}">${u.ativo ? 'Ativo' : 'Inativo'}</span></td>
+      </tr>`).join('');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function criarUsuario() {
+  try {
+    await api('POST', '/usuarios', {
+      nome: document.getElementById('usr-nome').value,
+      email: document.getElementById('usr-email').value,
+      senha: document.getElementById('usr-senha').value,
+      role: document.getElementById('usr-role').value,
+    });
+    closeModal('modal-novo-usuario');
+    toast('Usuário criado!', 'success');
+    carregarUsuarios();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Tenants ───────────────────────────────────────────────────
+async function carregarTenants() {
+  try {
+    const ts = await api('GET', '/tenants');
+    document.getElementById('tenants-sub').textContent = `${ts.length} administradoras`;
+    document.getElementById('tenants-tbody').innerHTML = ts.map(t => `
+      <tr>
+        <td><b>${t.nome}</b></td>
+        <td class="mono">${t.cnpj}</td>
+        <td><span class="badge ${t.ativo ? 'badge-green' : 'badge-gray'}">${t.ativo ? 'Ativo' : 'Inativo'}</span></td>
+      </tr>`).join('');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+async function criarTenant() {
+  try {
+    await api('POST', '/tenants', {
+      nome: document.getElementById('t-nome').value,
+      cnpj: document.getElementById('t-cnpj').value,
+      email: document.getElementById('t-email').value,
+    });
+    closeModal('modal-novo-tenant');
+    toast('Administradora criada!', 'success');
+    carregarTenants();
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Perfil ────────────────────────────────────────────────────
+async function trocarSenha() {
+  const nova = document.getElementById('nova-senha').value;
+  if (!nova) { closeModal('modal-perfil'); return; }
+  try {
+    await api('PATCH', `/usuarios/${usuario.id}/senha`, {nova_senha: nova});
+    toast('Senha alterada!', 'success');
+    closeModal('modal-perfil');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+// ── Modal helpers ─────────────────────────────────────────────
+function showModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+// ── Auto login ────────────────────────────────────────────────
+if (token && usuario) {
+  iniciarApp();
+}
+</script>
+</body>
+</html>
