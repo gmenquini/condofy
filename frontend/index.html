@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>D One Finance</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>D One Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;900&family=Archivo+Narrow:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@3.0.2/Control.FullScreen.css">
@@ -12,271 +13,500 @@
 <script src="https://unpkg.com/leaflet.fullscreen@3.0.2/Control.FullScreen.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
+/* ── RESET & TOKENS ───────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;
-  --border:#30363d;--border2:#444c56;
-  --green:#1a6b4a;--green2:#2d9065;--green3:#4ade80;--glow:#1a6b4a33;
-  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
-  --red:#f85149;--yellow:#e3b341;--blue:#58a6ff;--purple:#a78bfa;
-  --font:'Sora',sans-serif;--mono:'DM Mono',monospace;
-  --r:8px;--rl:12px;
+  --ink:#0a0b0d;
+  --ink2:#111318;
+  --ink3:#1a1d24;
+  --ink4:#22262f;
+  --wire:#2e3340;
+  --wire2:#3d4455;
+  --dim:#5a6275;
+  --muted:#8891a4;
+  --ghost:#b8c0cc;
+  --light:#e8eaed;
+  --white:#f4f5f7;
+  --silver:#c8cdd6;
+  --chrome:#dde1e8;
+
+  --accent:#e8eaed;
+  --accent2:#c8cdd6;
+  --glow:rgba(200,205,214,0.08);
+  --glow2:rgba(200,205,214,0.15);
+
+  --green:#22c55e;
+  --green-d:#16a34a;
+  --red:#ef4444;
+  --yellow:#f59e0b;
+  --blue:#3b82f6;
+
+  --font:'Archivo',sans-serif;
+  --font-narrow:'Archivo Narrow',sans-serif;
+  --mono:'DM Mono',monospace;
+  --r:6px;--rl:10px;--rxl:16px;
+  --ease:cubic-bezier(.4,0,.2,1);
 }
-html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);overflow:hidden}
-.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:52px 1fr;height:100vh}
-@media(max-width:768px){
-  .app{grid-template-columns:1fr;grid-template-rows:52px auto 1fr}
-  .sidebar{position:fixed;left:-220px;top:52px;height:calc(100vh - 52px);width:220px;z-index:50;transition:left .2s;box-shadow:4px 0 20px rgba(0,0,0,.5)}
+
+html,body{
+  height:100%;
+  font-family:var(--font);
+  background:var(--ink);
+  color:var(--light);
+  overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ── SCROLLBAR ───────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--wire2);border-radius:2px}
+
+/* ── LAYOUT ──────────────────────────────────────────────── */
+.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:56px 1fr;height:100vh}
+
+@media(max-width:800px){
+  .app{grid-template-columns:1fr;grid-template-rows:56px 1fr}
+  .sidebar{position:fixed;left:-220px;top:56px;height:calc(100vh - 56px);z-index:50;transition:left .2s var(--ease);box-shadow:8px 0 32px rgba(0,0,0,.6)}
   .sidebar.open{left:0}
-  .main{grid-column:1;padding:14px}
+  #mob-btn{display:flex!important}
+  .main{grid-column:1}
   .g4{grid-template-columns:repeat(2,1fr)!important}
   .g2{grid-template-columns:1fr!important}
   .g3{grid-template-columns:1fr!important}
-  #mob-menu{display:flex!important}
 }
-.topbar{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px;z-index:10}
-.sidebar{background:var(--bg2);border-right:1px solid var(--border);padding:10px 0;overflow-y:auto;display:flex;flex-direction:column}
-.main{overflow-y:auto;padding:20px;background:var(--bg)}
-#mob-menu{display:none;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--r);cursor:pointer;color:var(--text2);border:1px solid var(--border);background:var(--bg3);font-size:18px}
-.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
-.logo{display:flex;align-items:center;gap:9px;margin-right:auto}
-.lmark{width:30px;height:30px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:600;font-size:13px;color:#fff;box-shadow:0 0 12px var(--glow);flex-shrink:0}
-.ltext{font-size:14px;font-weight:600;letter-spacing:-.3px}
-.lbadge{font-size:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:1px 7px;border-radius:20px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.uchip{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 10px 3px 3px;cursor:pointer;font-size:12px;flex-shrink:0}
-.av{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0}
-.av-sa{background:linear-gradient(135deg,#1a6b4a,#2d9065)}
-.av-ad{background:linear-gradient(135deg,#1f4068,#2563eb)}
-.av-ge{background:linear-gradient(135deg,#4a3a00,#ca8a04)}
-.av-op{background:linear-gradient(135deg,#4a1a00,#ea580c)}
-.av-si{background:linear-gradient(135deg,#4a1a40,#9333ea)}
-.av-mo{background:linear-gradient(135deg,#1a3a4a,#0891b2)}
-.rb{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:500}
-.rb-sa{background:#1a3a2a;color:var(--green3);border:1px solid #2d9065}
-.rb-ad{background:#1a2a3a;color:var(--blue);border:1px solid #1f4068}
-.rb-ge{background:#2a2a1a;color:var(--yellow);border:1px solid #4a3a00}
-.rb-op{background:#2a1a1a;color:#ff9580;border:1px solid #4a1a00}
-.rb-si{background:#2a1a3a;color:var(--purple);border:1px solid #3a1a4a}
-.rb-mo{background:#1a2a3a;color:#67e8f9;border:1px solid #1a3a4a}
-.nl{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;padding:7px 7px 3px}
-.ni{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--text2);transition:all .12s;border:1px solid transparent;margin:1px 7px}
-.ni:hover{background:var(--bg3);color:var(--text)}
-.ni.active{background:#0d2a1a;color:var(--green3);border-color:#1a3a2a}
-.ni i{font-size:15px;width:16px;text-align:center;flex-shrink:0}
-.ndiv{height:1px;background:var(--border);margin:7px 12px}
-.nsec{padding:0 0 4px}
+
+/* ── TOPBAR ──────────────────────────────────────────────── */
+.topbar{
+  grid-column:1/-1;
+  background:var(--ink2);
+  border-bottom:1px solid var(--wire);
+  display:flex;align-items:center;
+  padding:0 20px;gap:12px;
+  z-index:20;
+  position:relative;
+}
+.topbar::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--wire2),transparent);
+}
+
+/* ── LOGO SVG ────────────────────────────────────────────── */
+.logo-wrap{display:flex;align-items:center;gap:10px;margin-right:auto;text-decoration:none}
+.logo-icon{width:30px;height:30px;flex-shrink:0}
+.logo-text-group{display:flex;flex-direction:column;gap:0px}
+.logo-name{font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--white);font-family:var(--font-narrow)}
+.logo-sub{font-size:7.5px;letter-spacing:.18em;color:var(--dim);font-family:var(--font-narrow);text-transform:uppercase}
+.ctx-chip{font-size:10px;background:var(--ink3);border:1px solid var(--wire);color:var(--muted);padding:2px 8px;border-radius:20px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#mob-btn{display:none;width:32px;height:32px;border-radius:var(--r);cursor:pointer;color:var(--muted);border:1px solid var(--wire);background:var(--ink3);align-items:center;justify-content:center;font-size:16px}
+.uchip{display:flex;align-items:center;gap:7px;background:var(--ink3);border:1px solid var(--wire);border-radius:20px;padding:3px 10px 3px 3px;cursor:pointer;font-size:11px;color:var(--ghost);transition:border-color .15s}
+.uchip:hover{border-color:var(--wire2)}
+.av{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--wire2),var(--dim));display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:var(--white);flex-shrink:0;font-family:var(--font-narrow)}
+
+/* ── SIDEBAR ─────────────────────────────────────────────── */
+.sidebar{
+  background:var(--ink2);
+  border-right:1px solid var(--wire);
+  display:flex;flex-direction:column;
+  padding:8px 0;
+  overflow-y:auto;
+}
+.nav-section{padding:0 8px}
+.nav-label{font-size:9px;font-weight:600;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;padding:10px 8px 4px;font-family:var(--font-narrow)}
+.ni{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 9px;border-radius:var(--r);
+  cursor:pointer;font-size:11.5px;
+  color:var(--muted);
+  transition:all .12s var(--ease);
+  border:1px solid transparent;
+  margin:1px 0;
+  font-family:var(--font-narrow);
+  font-weight:500;
+  letter-spacing:.02em;
+}
+.ni:hover{background:var(--ink3);color:var(--ghost)}
+.ni.active{
+  background:linear-gradient(135deg,var(--ink3),var(--ink4));
+  color:var(--white);
+  border-color:var(--wire);
+}
+.ni.active i{color:var(--silver)}
+.ni i{font-size:14px;width:16px;text-align:center;flex-shrink:0}
+.ni .ni-badge{margin-left:auto;font-size:9px;background:var(--wire);color:var(--muted);padding:1px 5px;border-radius:10px}
+.ni.active .ni-badge{background:var(--wire2);color:var(--ghost)}
+.ndiv{height:1px;background:var(--wire);margin:6px 10px}
 .nb{margin-top:auto}
-.ctx-banner{background:#0d2a3a;border:1px solid #1a3a4a;border-radius:var(--r);padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;font-size:11px}
-.ctx-info{color:#67e8f9}
-.ctx-btn{font-size:10px;padding:3px 8px;background:#1a3a4a;border:1px solid #2a4a5a;border-radius:var(--r);color:#67e8f9;cursor:pointer;font-family:var(--font)}
+
+/* ── MAIN ────────────────────────────────────────────────── */
+.main{overflow-y:auto;padding:24px;background:var(--ink)}
+
+/* ── PAGES ───────────────────────────────────────────────── */
 .page{display:none}.page.active{display:block}
-.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
-.pt{font-size:18px;font-weight:600;letter-spacing:-.3px}
-.ps{font-size:11px;color:var(--text2);margin-top:2px}
+
+/* ── PAGE HEADER ─────────────────────────────────────────── */
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;gap:12px;flex-wrap:wrap}
+.ph-left{}
+.pt{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--white);font-family:var(--font)}
+.ps{font-size:11px;color:var(--muted);margin-top:3px;font-family:var(--font-narrow);letter-spacing:.02em}
+.breadcrumb{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim);margin-bottom:14px;font-family:var(--font-narrow);letter-spacing:.04em}
+.breadcrumb span{cursor:pointer;transition:color .12s}.breadcrumb span:hover{color:var(--ghost)}
+.breadcrumb i{font-size:9px}
+
+/* ── METRIC CARDS ────────────────────────────────────────── */
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
-.mc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px}
-.ml{font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.mv{font-size:22px;font-weight:600;font-family:var(--mono);letter-spacing:-1px}
-.md{font-size:10px;margin-top:3px;color:var(--text2)}
-.up{color:#4ade80}.dn{color:#f85149}.wa{color:var(--yellow)}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:15px;margin-bottom:12px}
-.ch{font-size:12px;font-weight:600;margin-bottom:10px}
-.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500}
-.bg{background:#0d2a1a;color:var(--green3);border:1px solid #1a3a2a}
-.br{background:#2a0d0d;color:var(--red);border:1px solid #3a1a1a}
-.by{background:#2a2000;color:var(--yellow);border:1px solid #3a3000}
-.bb{background:#0d1a2a;color:var(--blue);border:1px solid #1a2a3a}
-.bx{background:var(--bg3);color:var(--text2);border:1px solid var(--border)}
-.dot{width:6px;height:6px;border-radius:50%;display:inline-block}
-.dg{background:#4ade80}.dr{background:#f85149}.dy{background:#e3b341}
-.row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px}
-.row:last-child{border-bottom:none}
-.rl{color:var(--text)}.rs{font-size:10px;color:var(--text2);margin-top:1px}
-.alert{display:flex;align-items:flex-start;gap:8px;padding:9px 10px;border-radius:var(--r);margin-bottom:6px;font-size:11px;line-height:1.4}
-.ar{background:#2a0d0d;border:1px solid #3a1a1a;color:var(--red)}
-.ay{background:#2a2000;border:1px solid #3a3000;color:var(--yellow)}
-.ag{background:#0d2a1a;border:1px solid #1a3a2a;color:var(--green3)}
-.ab{background:#0d1a2a;border:1px solid #1a2a3a;color:var(--blue)}
-.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--r);font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);transition:all .12s;font-family:var(--font)}
-.btn:hover{background:var(--bg2);border-color:var(--border2)}
-.btnp{background:var(--green);border-color:var(--green);color:#fff}
-.btnp:hover{background:var(--green2)}
-.btns{background:#1a2a3a;border-color:#2a3a4a;color:var(--blue)}
-.btnd{background:#2a0d0d;border-color:#3a1a1a;color:var(--red)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.fi{width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);font-size:12px;font-family:var(--font);color:var(--text);outline:none;transition:border-color .12s}
-.fi:focus{border-color:var(--green2)}
-.fi:invalid{border-color:var(--red)}
-.fi::placeholder{color:var(--text3)}
-select.fi option{background:var(--bg3)}
-.fg{margin-bottom:12px}
-.fl{font-size:10px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:4px}
-.ferr{font-size:10px;color:var(--red);margin-top:3px;display:none}
-.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.mo{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(3px)}
-.md2{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);width:480px;max-width:95vw;max-height:90vh;overflow-y:auto}
-.mh{padding:16px 18px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
-.mt2{font-size:14px;font-weight:600}
-.mb2{padding:16px 18px}
-.mf{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:7px;justify-content:flex-end}
-#ls{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200}
-.lb{width:380px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:28px;box-shadow:0 0 60px var(--glow)}
-.llm{width:48px;height:48px;background:linear-gradient(135deg,var(--green),var(--green2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:20px;color:#fff;margin:0 auto 8px;box-shadow:0 0 24px var(--glow)}
-.lerr{background:#2a0d0d;border:1px solid #3a1a1a;color:var(--red);padding:8px 10px;border-radius:var(--r);font-size:11px;margin-bottom:10px;display:none}
+
+.mc{
+  background:var(--ink2);
+  border:1px solid var(--wire);
+  border-radius:var(--rl);
+  padding:16px;
+  position:relative;
+  overflow:hidden;
+  transition:border-color .15s;
+}
+.mc:hover{border-color:var(--wire2)}
+.mc::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--wire2),transparent)}
+.ml{font-size:9px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px;font-family:var(--font-narrow)}
+.mv{font-size:24px;font-weight:700;font-family:var(--mono);letter-spacing:-1px;color:var(--white)}
+.md{font-size:10px;margin-top:4px;color:var(--muted);font-family:var(--font-narrow)}
+.mc-icon{position:absolute;top:14px;right:14px;font-size:18px;color:var(--wire2)}
+.up{color:var(--green)}.dn{color:var(--red)}.wa{color:var(--yellow)}
+
+/* ── CARDS ───────────────────────────────────────────────── */
+.card{
+  background:var(--ink2);
+  border:1px solid var(--wire);
+  border-radius:var(--rl);
+  padding:16px;
+  margin-bottom:12px;
+  position:relative;
+}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--wire),transparent)}
+.ch{font-size:11px;font-weight:600;color:var(--ghost);margin-bottom:12px;letter-spacing:.04em;font-family:var(--font-narrow);text-transform:uppercase;display:flex;align-items:center;gap:7px}
+.ch i{font-size:13px;color:var(--muted)}
+
+/* ── BADGE ───────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:9px;font-weight:600;font-family:var(--font-narrow);letter-spacing:.04em}
+.bg{background:#0f2d1a;color:var(--green);border:1px solid #1a4a28}
+.br{background:#2d0f0f;color:var(--red);border:1px solid #4a1a1a}
+.by{background:#2d1e0f;color:var(--yellow);border:1px solid #4a340f}
+.bb{background:#0f1e2d;color:var(--blue);border:1px solid #1a304a}
+.bx{background:var(--ink3);color:var(--muted);border:1px solid var(--wire)}
+.dot{width:5px;height:5px;border-radius:50%;display:inline-block}
+.dg{background:var(--green)}.dr{background:var(--red)}.dy{background:var(--yellow)}
+
+/* ── TABLE ───────────────────────────────────────────────── */
 table{width:100%;border-collapse:collapse;font-size:11px}
-th{text-align:left;padding:9px 14px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);background:var(--bg3)}
-td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+th{text-align:left;padding:9px 14px;font-size:9px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;border-bottom:1px solid var(--wire);background:var(--ink3);font-family:var(--font-narrow)}
+td{padding:10px 14px;border-bottom:1px solid var(--wire);color:var(--ghost);vertical-align:middle;font-family:var(--font-narrow)}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:#ffffff05}
-.search-bar{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:6px 10px;margin-bottom:10px}
-.search-bar i{color:var(--text3);font-size:14px;flex-shrink:0}
-.search-bar input{border:none;background:transparent;outline:none;font-size:12px;color:var(--text);width:100%;font-family:var(--font)}
-.search-bar input::placeholder{color:var(--text3)}
-.tc{position:fixed;bottom:18px;right:18px;z-index:1000;display:flex;flex-direction:column;gap:6px}
-.toast{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:10px 14px;font-size:11px;display:flex;align-items:center;gap:8px;min-width:260px;animation:si .18s ease;box-shadow:0 4px 16px rgba(0,0,0,.4)}
-.toast.success{border-left:3px solid var(--green3)}.toast.error{border-left:3px solid var(--red)}.toast.info{border-left:3px solid var(--blue)}
-@keyframes si{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
-.sp{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--green3);border-radius:50%;animation:spin .6s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.tbl-loading{text-align:center;padding:30px;color:var(--text2)}
-.empty{text-align:center;padding:40px 20px;color:var(--text2)}
-.empty i{font-size:32px;display:block;margin-bottom:8px;color:var(--text3)}
-.empty p{font-size:12px}
-.mono{font-family:var(--mono);font-size:11px;color:var(--text2)}
-.tag{font-family:var(--mono);font-size:10px;background:var(--bg3);border:1px solid var(--border);padding:2px 6px;border-radius:4px;color:var(--text2)}
-.amt{font-family:var(--mono);font-size:11px}
-.amt.c{color:var(--green3)}.amt.d{color:var(--red)}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tbl-wrap{background:var(--ink2);border:1px solid var(--wire);border-radius:var(--rl);overflow:hidden;margin-bottom:12px}
+.tbl-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--wire)}
+.tbl-title{font-size:11px;font-weight:600;color:var(--ghost);letter-spacing:.04em;font-family:var(--font-narrow);text-transform:uppercase}
+.tbl-meta{font-size:10px;color:var(--dim);font-family:var(--mono)}
+
+/* ── SEARCH BAR ──────────────────────────────────────────── */
+.search-bar{display:flex;align-items:center;gap:8px;background:var(--ink3);border:1px solid var(--wire);border-radius:var(--r);padding:7px 10px;margin-bottom:10px;transition:border-color .15s}
+.search-bar:focus-within{border-color:var(--wire2)}
+.search-bar i{color:var(--dim);font-size:13px;flex-shrink:0}
+.search-bar input{border:none;background:transparent;outline:none;font-size:11px;color:var(--light);width:100%;font-family:var(--font-narrow)}
+.search-bar input::placeholder{color:var(--dim)}
+
+/* ── FILTER PILLS ────────────────────────────────────────── */
 .fp{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
-.fp-btn{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:all .12s;font-family:var(--font)}
-.fp-btn.active{background:var(--green);border-color:var(--green);color:#fff}
-.leg{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:10px;color:var(--text2)}
-.ld{width:9px;height:9px;border-radius:2px;display:inline-block;margin-right:3px}
-.leaflet-container{background:var(--bg3)!important;font-family:var(--font)!important}
-.leaflet-tile{filter:brightness(0.85) saturate(0.8)}
-.leaflet-popup-content-wrapper{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);color:var(--text);box-shadow:0 4px 16px rgba(0,0,0,.5)}
-.leaflet-popup-tip{background:var(--bg2)}
-.leaflet-popup-content{font-size:11px;font-family:var(--font);margin:8px 12px}
-.leaflet-popup-content b{display:block;margin-bottom:2px;font-size:12px}
-.leaflet-control-zoom a,.leaflet-control-fullscreen a{background:var(--bg2)!important;color:var(--text)!important;border-color:var(--border)!important}
-.map-wrap{border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
-.cnpj-hint{font-size:10px;color:var(--text2);margin-top:4px}
-.cnpj-loading{font-size:10px;color:var(--text2);margin-top:4px;display:none}
-.cnpj-ok{font-size:10px;color:var(--green3);margin-top:4px;display:none}
-.tour-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
-.tour-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);width:420px;max-width:90vw;padding:24px}
-.tour-step{font-size:10px;color:var(--text3);margin-bottom:6px}
-.tour-title{font-size:16px;font-weight:600;margin-bottom:8px}
-.tour-desc{font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:20px}
-.tour-dots{display:flex;gap:6px;margin-bottom:16px}
-.tour-dot{width:8px;height:8px;border-radius:50%;background:var(--border)}
-.tour-dot.active{background:var(--green3)}
-.confirm-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);width:360px;max-width:90vw;padding:20px}
-.confirm-title{font-size:14px;font-weight:600;margin-bottom:6px}
-.confirm-msg{font-size:12px;color:var(--text2);margin-bottom:18px;line-height:1.5}
-.boleto-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.boleto-info .desc{font-size:12px;font-weight:500}
-.boleto-info .venc{font-size:10px;color:var(--text2);margin-top:2px}
-.boleto-valor{font-family:var(--mono);font-size:15px;font-weight:500}
-.boleto-valor.pago{color:var(--green3)}.boleto-valor.pendente{color:var(--yellow)}.boleto-valor.vencido{color:var(--red)}
-.breadcrumb{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);margin-bottom:16px}
-.breadcrumb span{cursor:pointer}.breadcrumb span:hover{color:var(--text)}
-.breadcrumb i{font-size:10px}
-.export-btn{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:var(--r);font-size:10px;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-family:var(--font)}
-.export-btn:hover{color:var(--text)}
+.fp-btn{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:500;cursor:pointer;border:1px solid var(--wire);background:var(--ink2);color:var(--muted);transition:all .12s;font-family:var(--font-narrow);letter-spacing:.03em}
+.fp-btn:hover{border-color:var(--wire2);color:var(--ghost)}
+.fp-btn.active{background:var(--ink3);border-color:var(--silver);color:var(--white)}
+
+/* ── BUTTONS ─────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--wire);background:var(--ink3);color:var(--ghost);transition:all .12s var(--ease);font-family:var(--font-narrow);letter-spacing:.03em;white-space:nowrap}
+.btn:hover{background:var(--ink4);border-color:var(--wire2);color:var(--white)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn i{font-size:13px}
+.btnp{background:var(--light);border-color:var(--light);color:var(--ink);font-weight:700}
+.btnp:hover{background:var(--white);border-color:var(--white);color:var(--ink)}
+.btnd{background:var(--ink3);border-color:#3a1a1a;color:var(--red)}
+.btnd:hover{background:#2d0f0f;border-color:var(--red)}
+.btns{background:var(--ink3);border-color:#1a2d3a;color:var(--blue)}
+.export-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--r);font-size:9px;cursor:pointer;border:1px solid var(--wire);background:transparent;color:var(--dim);font-family:var(--font-narrow);letter-spacing:.06em;text-transform:uppercase;font-weight:600;transition:all .12s}
+.export-btn:hover{border-color:var(--wire2);color:var(--muted)}
+
+/* ── FORMS ───────────────────────────────────────────────── */
+.fi{width:100%;padding:8px 10px;background:var(--ink3);border:1px solid var(--wire);border-radius:var(--r);font-size:11px;font-family:var(--font-narrow);color:var(--light);outline:none;transition:border-color .15s}
+.fi:focus{border-color:var(--wire2)}
+.fi::placeholder{color:var(--dim)}
+select.fi option{background:var(--ink3)}
+.fg{margin-bottom:12px}
+.fl{font-size:9px;font-weight:600;color:var(--dim);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px;font-family:var(--font-narrow)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ferr{font-size:9px;color:var(--red);margin-top:3px;display:none;font-family:var(--font-narrow)}
+.cnpj-hint{font-size:9px;color:var(--dim);margin-top:3px;font-family:var(--font-narrow)}
+.cnpj-ok{font-size:9px;color:var(--green);margin-top:3px;display:none;font-family:var(--font-narrow)}
+
+/* ── MODALS ──────────────────────────────────────────────── */
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+.md2{background:var(--ink2);border:1px solid var(--wire);border-radius:var(--rxl);width:480px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.6)}
+.mh{padding:18px 20px 14px;border-bottom:1px solid var(--wire);display:flex;align-items:center;justify-content:space-between}
+.mt2{font-size:14px;font-weight:700;color:var(--white);letter-spacing:-.01em}
+.mb2{padding:18px 20px}
+.mf{padding:14px 20px;border-top:1px solid var(--wire);display:flex;gap:8px;justify-content:flex-end}
+
+/* ── LOGIN ───────────────────────────────────────────────── */
+#ls{
+  position:fixed;inset:0;
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  z-index:200;
+}
+.login-bg{
+  position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 60% at 20% 50%, rgba(200,205,214,.03) 0%, transparent 70%),
+             radial-gradient(ellipse 40% 40% at 80% 80%, rgba(200,205,214,.02) 0%, transparent 60%);
+}
+.lb{
+  position:relative;
+  width:400px;
+  background:var(--ink2);
+  border:1px solid var(--wire);
+  border-radius:var(--rxl);
+  padding:32px;
+  box-shadow:0 32px 80px rgba(0,0,0,.6), 0 0 0 1px rgba(200,205,214,.04);
+}
+.lb::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,var(--wire2),transparent)}
+.lerr{background:#2d0f0f;border:1px solid #3a1a1a;color:var(--red);padding:8px 10px;border-radius:var(--r);font-size:10px;margin-bottom:12px;display:none;font-family:var(--font-narrow)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo-icon{display:inline-flex;width:52px;height:52px;align-items:center;justify-content:center;background:var(--ink3);border:1px solid var(--wire);border-radius:14px;margin-bottom:12px}
+.login-title{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--white)}
+.login-sub{font-size:10px;color:var(--dim);margin-top:4px;letter-spacing:.06em;text-transform:uppercase;font-family:var(--font-narrow)}
+
+/* ── TOAST ───────────────────────────────────────────────── */
+.tc{position:fixed;bottom:20px;right:20px;z-index:1000;display:flex;flex-direction:column;gap:6px}
+.toast{background:var(--ink3);border:1px solid var(--wire);border-radius:var(--r);padding:10px 14px;font-size:11px;display:flex;align-items:center;gap:8px;min-width:260px;animation:toastin .18s var(--ease);box-shadow:0 8px 24px rgba(0,0,0,.4);font-family:var(--font-narrow)}
+.toast.success{border-left:2px solid var(--green)}.toast.error{border-left:2px solid var(--red)}.toast.info{border-left:2px solid var(--blue)}
+@keyframes toastin{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+.sp{display:inline-block;width:11px;height:11px;border:1.5px solid var(--wire2);border-top-color:var(--silver);border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MISC ────────────────────────────────────────────────── */
+.empty{text-align:center;padding:48px 20px;color:var(--dim)}
+.empty i{font-size:28px;display:block;margin-bottom:8px;color:var(--wire2)}
+.empty p{font-size:11px;font-family:var(--font-narrow)}
+.mono{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tag{font-family:var(--mono);font-size:9px;background:var(--ink3);border:1px solid var(--wire);padding:2px 6px;border-radius:4px;color:var(--muted)}
+.amt{font-family:var(--mono);font-size:11px}
+.amt.c{color:var(--green)}.amt.d{color:var(--red)}
+.row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--wire);font-size:11px;font-family:var(--font-narrow)}
+.row:last-child{border-bottom:none}
+.alert{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border-radius:var(--r);margin-bottom:8px;font-size:10px;line-height:1.5;font-family:var(--font-narrow)}
+.ar{background:#2d0f0f;border:1px solid #3a1a1a;color:var(--red)}
+.ay{background:#2d1e0f;border:1px solid #4a340f;color:var(--yellow)}
+.ag{background:#0f2d1a;border:1px solid #1a4a28;color:var(--green)}
+.ab{background:#0f1e2d;border:1px solid #1a304a;color:var(--blue)}
+.tbl-loading{text-align:center;padding:32px;color:var(--dim);font-family:var(--font-narrow);font-size:11px;display:flex;align-items:center;justify-content:center;gap:8px}
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
+
+/* ── CONFIRM ─────────────────────────────────────────────── */
+.confirm-box{background:var(--ink2);border:1px solid var(--wire);border-radius:var(--rxl);width:360px;max-width:90vw;padding:24px;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+.confirm-title{font-size:14px;font-weight:700;color:var(--white);margin-bottom:6px;letter-spacing:-.01em}
+.confirm-msg{font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6;font-family:var(--font-narrow)}
+
+/* ── ONBOARDING ──────────────────────────────────────────── */
+.ob-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:150;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.ob-box{
+  background:var(--ink2);
+  border:1px solid var(--wire);
+  border-radius:var(--rxl);
+  width:520px;max-width:95vw;
+  box-shadow:0 32px 80px rgba(0,0,0,.7);
+  overflow:hidden;
+}
+.ob-header{padding:24px 28px 0;position:relative}
+.ob-step-indicator{display:flex;gap:6px;margin-bottom:18px}
+.ob-step-dot{height:3px;flex:1;border-radius:2px;background:var(--wire);transition:background .3s}
+.ob-step-dot.done{background:var(--silver)}
+.ob-step-dot.active{background:var(--white)}
+.ob-title{font-size:18px;font-weight:700;letter-spacing:-.02em;color:var(--white);margin-bottom:6px}
+.ob-desc{font-size:11px;color:var(--muted);line-height:1.6;font-family:var(--font-narrow);margin-bottom:20px}
+.ob-body{padding:0 28px}
+.ob-footer{padding:20px 28px 24px;display:flex;justify-content:space-between;align-items:center}
+.ob-skip{font-size:10px;color:var(--dim);cursor:pointer;font-family:var(--font-narrow);letter-spacing:.04em}
+.ob-skip:hover{color:var(--muted)}
+
+/* ── CONCILIATION SPECIAL ────────────────────────────────── */
+.concil-hero{
+  background:linear-gradient(135deg,var(--ink2) 0%,var(--ink3) 100%);
+  border:1px solid var(--wire);
+  border-radius:var(--rxl);
+  padding:24px;
+  margin-bottom:14px;
+  position:relative;
+  overflow:hidden;
+}
+.concil-hero::before{
+  content:'';position:absolute;top:-40px;right:-40px;
+  width:180px;height:180px;
+  background:radial-gradient(circle,rgba(200,205,214,.04) 0%,transparent 70%);
+  border-radius:50%;
+}
+.concil-score{
+  position:relative;
+  display:inline-flex;align-items:center;justify-content:center;
+  width:80px;height:80px;
+  margin-bottom:12px;
+}
+.concil-score-ring{transform:rotate(-90deg)}
+.concil-score-val{position:absolute;font-size:18px;font-weight:700;color:var(--white);font-family:var(--mono)}
+.concil-score-lbl{font-size:8px;color:var(--muted);position:absolute;bottom:8px;font-family:var(--font-narrow);letter-spacing:.06em;text-transform:uppercase}
+
+/* ── MATCH CARD ──────────────────────────────────────────── */
+.match-card{
+  background:var(--ink3);
+  border:1px solid var(--wire);
+  border-radius:var(--r);
+  padding:10px 12px;
+  margin-bottom:6px;
+  display:flex;align-items:center;gap:10px;
+  transition:border-color .15s;
+}
+.match-card:hover{border-color:var(--wire2)}
+.match-line{flex:1;min-width:0}
+.match-desc{font-size:11px;color:var(--ghost);font-family:var(--font-narrow);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.match-meta{font-size:9px;color:var(--dim);margin-top:1px;font-family:var(--font-narrow)}
+.match-arrow{color:var(--dim);font-size:16px;flex-shrink:0}
+.match-score{font-size:9px;font-family:var(--mono);color:var(--muted);flex-shrink:0;width:28px;text-align:right}
+
+/* ── MAP ─────────────────────────────────────────────────── */
+.leaflet-container{background:var(--ink3)!important;font-family:var(--font-narrow)!important}
+.leaflet-tile{filter:brightness(0.75) saturate(0.5) contrast(1.1)}
+.leaflet-popup-content-wrapper{background:var(--ink2);border:1px solid var(--wire2);border-radius:var(--r);color:var(--light);box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.leaflet-popup-tip{background:var(--ink2)}
+.leaflet-popup-content{font-size:10px;font-family:var(--font-narrow);margin:8px 12px}
+.leaflet-popup-content b{display:block;margin-bottom:2px;font-size:11px;color:var(--white)}
+.leaflet-control-zoom a,.leaflet-control-fullscreen a{background:var(--ink2)!important;color:var(--ghost)!important;border-color:var(--wire)!important}
+.map-wrap{border:1px solid var(--wire);border-radius:var(--r);overflow:hidden}
+
+/* ── BANNER DE CONTEXTO ──────────────────────────────────── */
+.ctx-banner{background:var(--ink3);border:1px solid var(--wire2);border-radius:var(--r);padding:8px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;font-size:10px;font-family:var(--font-narrow)}
+.ctx-info{color:var(--muted)}
+.ctx-btn{font-size:9px;padding:3px 8px;background:var(--ink4);border:1px solid var(--wire2);border-radius:var(--r);color:var(--ghost);cursor:pointer;font-family:var(--font-narrow);font-weight:600;letter-spacing:.04em;text-transform:uppercase;transition:all .12s}
+.ctx-btn:hover{border-color:var(--silver);color:var(--white)}
+
+/* ── ROLE BADGES ─────────────────────────────────────────── */
+.rb{font-size:9px;padding:2px 8px;border-radius:20px;font-weight:600;font-family:var(--font-narrow);letter-spacing:.06em;text-transform:uppercase}
+.rb-sa{background:var(--ink3);color:var(--silver);border:1px solid var(--wire2)}
+.rb-ad{background:var(--ink3);color:var(--ghost);border:1px solid var(--wire)}
+.rb-ge{background:var(--ink3);color:var(--muted);border:1px solid var(--wire)}
+.rb-op{background:var(--ink3);color:var(--dim);border:1px solid var(--wire)}
+.rb-si{background:var(--ink3);color:var(--muted);border:1px solid var(--wire)}
+.rb-mo{background:var(--ink3);color:var(--dim);border:1px solid var(--wire)}
+
+/* ── PROGRESS BAR ────────────────────────────────────────── */
+.pbar{height:4px;background:var(--ink4);border-radius:2px;overflow:hidden;margin-top:8px}
+.pbar-fill{height:100%;border-radius:2px;transition:width .6s var(--ease)}
+
+/* ── STAT LARGE ──────────────────────────────────────────── */
+.stat-xl{font-size:42px;font-weight:700;font-family:var(--mono);letter-spacing:-3px;color:var(--white);line-height:1}
+.stat-unit{font-size:14px;color:var(--muted);font-family:var(--font-narrow);margin-left:2px}
+
+/* ── LEGEND ──────────────────────────────────────────────── */
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:9px;color:var(--muted);font-family:var(--font-narrow);letter-spacing:.04em}
+.ld{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px}
 </style>
 </head>
 <body>
 
+<!-- ══ LOGIN ══════════════════════════════════════════════════ -->
 <div id="ls">
+  <div class="login-bg"></div>
   <div class="lb">
-    <div style="text-align:center;margin-bottom:22px">
-      <div class="llm">D</div>
-      <div style="font-size:19px;font-weight:600;letter-spacing:-.4px">D One Finance</div>
-      <div style="font-size:11px;color:var(--text2);margin-top:3px">Gestão condominial inteligente</div>
+    <div class="login-logo">
+      <div class="login-logo-icon">
+        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+          <path d="M4 4h9c6.075 0 11 4.925 11 11s-4.925 11-11 11H4V4z" stroke="#8891a4" stroke-width="1.5" fill="none"/>
+          <path d="M13 9v12" stroke="#c8cdd6" stroke-width="2" stroke-linecap="round"/>
+          <path d="M13 9l4 4" stroke="#c8cdd6" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="login-title">D ONE HUB</div>
+      <div class="login-sub">Soluções Financeiras Inteligentes</div>
     </div>
     <div class="lerr" id="lerr"></div>
-    <div class="fg"><label class="fl">Email</label><input class="fi" type="email" id="li-email" placeholder="seu@email.com" value="admin@condofy.com.br" required></div>
-    <div class="fg"><label class="fl">Senha</label><input class="fi" type="password" id="li-senha" placeholder="••••••••" value="Condofy@2026!" required minlength="6"></div>
-    <button class="btn btnp" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()" id="btnl"><i class="ti ti-login"></i>Entrar</button>
-    <div style="margin-top:14px;text-align:center;font-size:11px;color:var(--text3)">
-      Sem conta? <span style="color:var(--green3);cursor:pointer" onclick="showM('m-reg')">Cadastrar administradora</span>
+    <div class="fg">
+      <label class="fl">Email</label>
+      <input class="fi" type="email" id="li-email" placeholder="seu@email.com" value="admin@condofy.com.br" required>
+    </div>
+    <div class="fg" style="margin-bottom:18px">
+      <label class="fl">Senha</label>
+      <input class="fi" type="password" id="li-senha" placeholder="••••••••" value="Condofy@2026!" required>
+    </div>
+    <button class="btn btnp" style="width:100%;justify-content:center;padding:10px;font-size:12px" onclick="doLogin()" id="btnl">
+      <i class="ti ti-login"></i>Entrar na plataforma
+    </button>
+    <div style="margin-top:16px;text-align:center;font-size:10px;color:var(--dim);font-family:var(--font-narrow)">
+      Sem conta? <span style="color:var(--ghost);cursor:pointer;letter-spacing:.03em" onclick="showM('m-reg')">Cadastrar administradora</span>
     </div>
   </div>
 </div>
 
+<!-- ══ APP ════════════════════════════════════════════════════ -->
 <div class="app" id="app" style="display:none">
+
   <div class="topbar">
-    <div id="mob-menu" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></div>
-    <div class="logo">
-      <div class="lmark">D</div>
-      <span class="ltext">D One Finance</span>
-      <span class="lbadge" id="tb-ctx">—</span>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px">
+    <div id="mob-btn" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></div>
+    <a class="logo-wrap" href="#" onclick="return false">
+      <svg class="logo-icon" viewBox="0 0 30 30" fill="none">
+        <path d="M4 4h9c6.075 0 11 4.925 11 11s-4.925 11-11 11H4V4z" stroke="#5a6275" stroke-width="1.2" fill="none"/>
+        <path d="M13 9v12" stroke="#c8cdd6" stroke-width="1.8" stroke-linecap="round"/>
+        <path d="M13 9l4 4" stroke="#c8cdd6" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <div class="logo-text-group">
+        <div class="logo-name">D ONE HUB</div>
+        <div class="logo-sub">Infraestrutura Financeira</div>
+      </div>
+    </a>
+    <span class="ctx-chip" id="tb-ctx">—</span>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
       <span id="tb-rb" class="rb"></span>
       <div class="uchip" onclick="showM('m-perfil')">
-        <div class="av av-sa" id="tb-av">—</div>
-        <span id="tb-nome" style="font-size:11px">—</span>
-        <i class="ti ti-chevron-down" style="font-size:11px;color:var(--text3)"></i>
+        <div class="av" id="tb-av">—</div>
+        <span id="tb-nome">—</span>
+        <i class="ti ti-chevron-down" style="font-size:10px;color:var(--dim)"></i>
       </div>
     </div>
   </div>
+
   <div class="sidebar" id="sidebar"></div>
+
   <div class="main" id="main-content">
 
+    <!-- DASHBOARD -->
     <div class="page active" id="page-dash">
-      <div id="breadcrumb-dash" class="breadcrumb"></div>
-      <div class="ph"><div><div class="pt" id="dash-title">Dashboard</div><div class="ps" id="dash-sub"></div></div><div id="dash-actions"></div></div>
       <div id="dash-body"><div class="tbl-loading"><span class="sp"></span> Carregando...</div></div>
     </div>
 
-    <div class="page" id="page-adms">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Administradoras</span></div>
-      <div class="ph"><div><div class="pt">Administradoras</div><div class="ps" id="adms-sub">—</div></div>
-        <div style="display:flex;gap:8px">
-          <span class="export-btn" onclick="exportCSV('tb-adms','administradoras')"><i class="ti ti-download"></i>CSV</span>
-          <button class="btn btnp" onclick="showM('m-tenant')"><i class="ti ti-plus"></i>Nova</button>
-        </div>
-      </div>
-      <div class="search-bar"><i class="ti ti-search"></i><input id="search-adms" placeholder="Buscar administradora..." oninput="filterTable('tb-adms',this.value)"></div>
-      <div class="card" style="padding:0"><table><thead><tr><th>#</th><th>Nome</th><th>CNPJ</th><th>Condomínios</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tb-adms"><tr><td colspan="6"><div class="tbl-loading"><span class="sp"></span></div></td></tr></tbody></table></div>
-    </div>
-
-    <div class="page" id="page-condos">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Condomínios</span></div>
-      <div class="ph"><div><div class="pt">Condomínios</div><div class="ps" id="condos-sub">—</div></div>
-        <div style="display:flex;gap:8px">
-          <span class="export-btn" onclick="exportCSV('tb-condos','condominios')"><i class="ti ti-download"></i>CSV</span>
-          <button class="btn btnp" onclick="showM('m-condo')"><i class="ti ti-plus"></i>Novo</button>
-        </div>
-      </div>
-      <div class="search-bar"><i class="ti ti-search"></i><input id="search-condos" placeholder="Buscar condomínio..." oninput="filterTable('tb-condos',this.value)"></div>
-      <div class="card" style="padding:0"><table><thead><tr><th>Nome</th><th>Cidade/UF</th><th>Unidades</th><th>Saldo</th><th>Pendentes</th><th>Ação</th></tr></thead><tbody id="tb-condos"><tr><td colspan="6"><div class="tbl-loading"><span class="sp"></span></div></td></tr></tbody></table></div>
-    </div>
-
-    <div class="page" id="page-contas">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Contas Bancárias</span></div>
-      <div class="ph"><div><div class="pt">Contas Bancárias</div><div class="ps">Via Pluggy Open Finance</div></div></div>
-      <div class="card" style="padding:0"><table><thead><tr><th>Condomínio</th><th>Banco</th><th>Ag/Conta</th><th>Saldo</th><th>Sync</th><th>Status</th></tr></thead><tbody id="tb-contas"><tr><td colspan="6"><div class="tbl-loading"><span class="sp"></span></div></td></tr></tbody></table></div>
-    </div>
-
+    <!-- CONCILIAÇÃO (página principal) -->
     <div class="page" id="page-concil">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Conciliação</span></div>
+      <div class="breadcrumb"><span onclick="nav('dash')">Início</span><i class="ti ti-chevron-right"></i><span>Conciliação</span></div>
       <div class="ph">
-        <div><div class="pt">Conciliação Bancária</div><div class="ps" id="concil-sub">Selecione um condomínio</div></div>
+        <div>
+          <div class="pt">Conciliação Bancária</div>
+          <div class="ps" id="concil-sub">Selecione um condomínio para começar</div>
+        </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <select class="fi" id="concil-sel" onchange="loadTx()" style="width:180px;font-size:11px"><option value="">— Condomínio —</option></select>
-          <button class="btn btnp" onclick="runConcil()" id="btn-concil"><i class="ti ti-magic"></i>Conciliar auto</button>
+          <select class="fi" id="concil-sel" onchange="loadTx()" style="width:190px;font-size:11px"></select>
+          <button class="btn btnp" onclick="runConcil()" id="btn-concil"><i class="ti ti-sparkles"></i>Conciliar auto</button>
           <span class="export-btn" onclick="exportCSV('tb-tx','transacoes')"><i class="ti ti-download"></i>CSV</span>
         </div>
       </div>
-      <div class="g4" style="margin-bottom:12px">
-        <div class="mc"><div class="ml">Total</div><div class="mv" id="cm-t">—</div></div>
-        <div class="mc"><div class="ml">Conciliadas</div><div class="mv up" id="cm-c">—</div></div>
-        <div class="mc"><div class="ml">Pendentes</div><div class="mv wa" id="cm-p">—</div></div>
-        <div class="mc"><div class="ml">Divergências</div><div class="mv dn" id="cm-d">—</div></div>
+      <div class="g4" id="concil-metrics" style="margin-bottom:14px">
+        <div class="mc"><i class="ti ti-arrows-exchange mc-icon"></i><div class="ml">Total</div><div class="mv" id="cm-t">—</div></div>
+        <div class="mc"><i class="ti ti-check mc-icon"></i><div class="ml">Conciliadas</div><div class="mv up" id="cm-c">—</div></div>
+        <div class="mc"><i class="ti ti-clock mc-icon"></i><div class="ml">Pendentes</div><div class="mv wa" id="cm-p">—</div></div>
+        <div class="mc"><i class="ti ti-alert-triangle mc-icon"></i><div class="ml">Divergências</div><div class="mv dn" id="cm-d">—</div></div>
       </div>
       <div class="fp">
         <button class="fp-btn active" onclick="setTxF(this,'')">Todas</button>
@@ -284,22 +514,24 @@ tr:hover td{background:#ffffff05}
         <button class="fp-btn" onclick="setTxF(this,'conciliada')">Conciliadas</button>
         <button class="fp-btn" onclick="setTxF(this,'divergencia')">Divergências</button>
       </div>
-      <div class="search-bar"><i class="ti ti-search"></i><input id="search-tx" placeholder="Buscar transação..." oninput="filterTable('tb-tx',this.value)"></div>
-      <div class="card" style="padding:0">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--border)">
-          <span style="font-size:12px;font-weight:600">Transações</span><span class="mono" id="tx-count">0</span>
+      <div class="search-bar"><i class="ti ti-search"></i><input id="search-tx" placeholder="Buscar por descrição, valor..." oninput="filterTable('tb-tx',this.value)"></div>
+      <div class="tbl-wrap">
+        <div class="tbl-header">
+          <span class="tbl-title">Transações bancárias</span>
+          <span class="tbl-meta" id="tx-count">—</span>
         </div>
         <table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
-        <tbody id="tb-tx"></tbody></table>
+        <tbody id="tb-tx"><tr><td colspan="6"><div class="empty"><i class="ti ti-building-bank"></i><p>Selecione um condomínio</p></div></td></tr></tbody></table>
       </div>
     </div>
 
+    <!-- LANÇAMENTOS -->
     <div class="page" id="page-lanc">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Lançamentos</span></div>
+      <div class="breadcrumb"><span onclick="nav('dash')">Início</span><i class="ti ti-chevron-right"></i><span>Lançamentos</span></div>
       <div class="ph">
-        <div><div class="pt">Lançamentos</div><div class="ps" id="lanc-sub">Receitas e despesas</div></div>
+        <div><div class="pt">Lançamentos</div><div class="ps">Receitas e despesas por condomínio</div></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <select class="fi" id="lanc-sel" onchange="loadLanc()" style="width:180px;font-size:11px"><option value="">— Condomínio —</option></select>
+          <select class="fi" id="lanc-sel" onchange="loadLanc()" style="width:190px;font-size:11px"></select>
           <span class="export-btn" onclick="exportCSV('tb-lanc','lancamentos')"><i class="ti ti-download"></i>CSV</span>
           <button class="btn btnp" onclick="showM('m-lanc')"><i class="ti ti-plus"></i>Novo</button>
         </div>
@@ -311,85 +543,95 @@ tr:hover td{background:#ffffff05}
         <button class="fp-btn" onclick="setLancF(this,'vencido')">Vencidos</button>
       </div>
       <div class="search-bar"><i class="ti ti-search"></i><input id="search-lanc" placeholder="Buscar lançamento..." oninput="filterTable('tb-lanc',this.value)"></div>
-      <div class="card" style="padding:0"><table><thead><tr><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Vencimento</th><th>Parcela</th><th>Status</th><th>Ação</th></tr></thead>
-      <tbody id="tb-lanc"><tr><td colspan="7"><div class="empty"><i class="ti ti-list"></i><p>Selecione um condomínio</p></div></td></tr></tbody></table></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Vencimento</th><th>Parcela</th><th>Status</th><th>Ação</th></tr></thead>
+        <tbody id="tb-lanc"><tr><td colspan="7"><div class="empty"><i class="ti ti-list"></i><p>Selecione um condomínio</p></div></td></tr></tbody>
+      </table></div>
     </div>
 
+    <!-- CONDOMÍNIOS -->
+    <div class="page" id="page-condos">
+      <div class="breadcrumb"><span onclick="nav('dash')">Início</span><i class="ti ti-chevron-right"></i><span>Condomínios</span></div>
+      <div class="ph">
+        <div><div class="pt">Condomínios</div><div class="ps" id="condos-sub">—</div></div>
+        <div style="display:flex;gap:8px">
+          <span class="export-btn" onclick="exportCSV('tb-condos','condominios')"><i class="ti ti-download"></i>CSV</span>
+          <button class="btn btnp" onclick="showM('m-condo')"><i class="ti ti-plus"></i>Novo</button>
+        </div>
+      </div>
+      <div class="search-bar"><i class="ti ti-search"></i><input placeholder="Buscar condomínio..." oninput="filterTable('tb-condos',this.value)"></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Nome</th><th>Cidade / UF</th><th>Unidades</th><th>Saldo</th><th>Pendentes</th><th>Ação</th></tr></thead>
+        <tbody id="tb-condos"></tbody>
+      </table></div>
+    </div>
+
+    <!-- ADMINISTRADORAS (super admin) -->
+    <div class="page" id="page-adms">
+      <div class="breadcrumb"><span onclick="nav('dash')">Início</span><i class="ti ti-chevron-right"></i><span>Administradoras</span></div>
+      <div class="ph">
+        <div><div class="pt">Administradoras</div><div class="ps" id="adms-sub">—</div></div>
+        <div style="display:flex;gap:8px">
+          <span class="export-btn" onclick="exportCSV('tb-adms','administradoras')"><i class="ti ti-download"></i>CSV</span>
+          <button class="btn btnp" onclick="showM('m-tenant')"><i class="ti ti-plus"></i>Nova</button>
+        </div>
+      </div>
+      <div class="search-bar"><i class="ti ti-search"></i><input placeholder="Buscar administradora..." oninput="filterTable('tb-adms',this.value)"></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>#</th><th>Nome</th><th>CNPJ</th><th>Condomínios</th><th>Status</th><th>Ação</th></tr></thead>
+        <tbody id="tb-adms"></tbody>
+      </table></div>
+    </div>
+
+    <!-- USUÁRIOS -->
     <div class="page" id="page-usrs">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Usuários</span></div>
-      <div class="ph"><div><div class="pt">Usuários</div><div class="ps" id="usrs-sub">—</div></div>
+      <div class="breadcrumb"><span onclick="nav('dash')">Início</span><i class="ti ti-chevron-right"></i><span>Usuários</span></div>
+      <div class="ph">
+        <div><div class="pt">Usuários</div><div class="ps" id="usrs-sub">—</div></div>
         <div style="display:flex;gap:8px">
           <span class="export-btn" onclick="exportCSV('tb-usrs','usuarios')"><i class="ti ti-download"></i>CSV</span>
           <button class="btn btnp" onclick="showM('m-usr')"><i class="ti ti-plus"></i>Novo</button>
         </div>
       </div>
-      <div class="search-bar"><i class="ti ti-search"></i><input id="search-usrs" placeholder="Buscar usuário..." oninput="filterTable('tb-usrs',this.value)"></div>
-      <div class="card" style="padding:0"><table><thead><tr><th>Nome</th><th>Email</th><th>Role</th><th>Status</th><th>Ação</th></tr></thead>
-      <tbody id="tb-usrs"></tbody></table></div>
+      <div class="search-bar"><i class="ti ti-search"></i><input placeholder="Buscar usuário..." oninput="filterTable('tb-usrs',this.value)"></div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Nome</th><th>Email</th><th>Role</th><th>Status</th><th>Ação</th></tr></thead>
+        <tbody id="tb-usrs"></tbody>
+      </table></div>
     </div>
 
-    <div class="page" id="page-boletos">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Boletos</span></div>
-      <div class="ph"><div><div class="pt">Boletos</div><div class="ps" id="bol-sub">Cobranças do condomínio</div></div></div>
-      <div class="alert ab"><i class="ti ti-info-circle"></i><div>Os boletos serão gerados pela administradora e aparecerão aqui.</div></div>
-      <div class="boleto-card"><div class="boleto-info"><div class="desc">Taxa condominial — Junho 2026</div><div class="venc">Vencimento: 10/06/2026</div></div><div style="display:flex;align-items:center;gap:10px"><div class="boleto-valor pendente">R$ 850,00</div><span class="badge by"><span class="dot dy"></span>Pendente</span><button class="btn btns" style="font-size:10px;padding:4px 8px"><i class="ti ti-download"></i>2ª via</button></div></div>
-      <div class="boleto-card"><div class="boleto-info"><div class="desc">Taxa condominial — Maio 2026</div><div class="venc">Vencimento: 10/05/2026 · Pago em 08/05/2026</div></div><div style="display:flex;align-items:center;gap:10px"><div class="boleto-valor pago">R$ 850,00</div><span class="badge bg"><span class="dot dg"></span>Pago</span></div></div>
-    </div>
-
-    <div class="page" id="page-extrato">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Extrato</span></div>
-      <div class="ph"><div><div class="pt">Extrato</div><div class="ps" id="ext-sub">Movimentações financeiras</div></div></div>
-      <div class="g3">
-        <div class="mc"><div class="ml">Saldo atual</div><div class="mv up" id="ext-saldo">—</div></div>
-        <div class="mc"><div class="ml">Receitas do mês</div><div class="mv up" id="ext-rec">—</div></div>
-        <div class="mc"><div class="ml">Despesas do mês</div><div class="mv dn" id="ext-desp">—</div></div>
-      </div>
-      <div class="card" style="padding:0"><table><thead><tr><th>Data</th><th>Descrição</th><th>Tipo</th><th>Valor</th><th>Status</th></tr></thead>
-      <tbody id="tb-ext"></tbody></table></div>
-    </div>
-
-    <div class="page" id="page-docs">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Documentos</span></div>
-      <div class="ph"><div><div class="pt">Documentos</div><div class="ps">Atas, regulamentos e balancetes</div></div></div>
-      <div class="alert ab"><i class="ti ti-info-circle"></i><div>Os documentos são disponibilizados pela administradora.</div></div>
-      <div class="card" style="padding:0"><table><thead><tr><th>Documento</th><th>Data</th><th>Ação</th></tr></thead><tbody>
-        <tr><td><b>Ata Assembleia Ordinária 2026</b></td><td class="mono">15/03/2026</td><td><button class="btn btns" style="font-size:10px;padding:4px 8px"><i class="ti ti-download"></i>Baixar</button></td></tr>
-        <tr><td><b>Balancete Maio 2026</b></td><td class="mono">01/06/2026</td><td><button class="btn btns" style="font-size:10px;padding:4px 8px"><i class="ti ti-download"></i>Baixar</button></td></tr>
-        <tr><td><b>Regulamento Interno</b></td><td class="mono">10/01/2025</td><td><button class="btn btns" style="font-size:10px;padding:4px 8px"><i class="ti ti-download"></i>Baixar</button></td></tr>
-      </tbody></table></div>
-    </div>
-
+    <!-- CONFIGURAÇÕES -->
     <div class="page" id="page-cfg">
-      <div class="breadcrumb"><span onclick="nav('dash')">Dashboard</span><i class="ti ti-chevron-right"></i><span>Configurações</span></div>
-      <div class="ph"><div><div class="pt">Configurações</div></div></div>
+      <div class="breadcrumb"><span onclick="nav('dash')">Início</span><i class="ti ti-chevron-right"></i><span>Configurações</span></div>
+      <div class="ph"><div><div class="pt">Configurações</div><div class="ps">Conexões bancárias e integrações</div></div></div>
       <div class="card">
-        <div class="ch">Integração Pluggy Open Finance</div>
-        <div class="fg"><label class="fl">Client ID</label><input class="fi" id="cfg-cid" placeholder="Seu Client ID do Pluggy"></div>
-        <div class="fg"><label class="fl">Client Secret</label><input class="fi" id="cfg-secret" type="password" placeholder="••••••••••••••••••••"></div>
-        <button class="btn btnp" onclick="salvarPluggy()"><i class="ti ti-check"></i>Salvar credenciais</button>
+        <div class="ch"><i class="ti ti-plug"></i>Pluggy Open Finance</div>
+        <div class="fg"><label class="fl">Client ID</label><input class="fi" id="cfg-cid" placeholder="Seu Client ID"></div>
+        <div class="fg"><label class="fl">Client Secret</label><input class="fi" id="cfg-secret" type="password" placeholder="••••••••••••"></div>
+        <button class="btn btnp" onclick="salvarPluggy()"><i class="ti ti-check"></i>Salvar</button>
+      </div>
+      <div class="card">
+        <div class="ch"><i class="ti ti-building-bank"></i>Contas conectadas</div>
+        <div id="contas-cfg-list"><div class="tbl-loading"><span class="sp"></span></div></div>
       </div>
     </div>
 
   </div>
 </div>
 
-<!-- MODAIS -->
+<!-- ══ MODAIS ════════════════════════════════════════════════ -->
 <div id="m-reg" class="mo" style="display:none" onclick="closeM('m-reg')"><div class="md2" onclick="e()">
   <div class="mh"><span class="mt2">Cadastrar administradora</span><button class="btn" onclick="closeM('m-reg')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
-    <div class="fr">
-      <div class="fg"><label class="fl">Seu nome *</label><input class="fi" id="r-nome" placeholder="João Silva" required></div>
-      <div class="fg"><label class="fl">Nome da empresa *</label><input class="fi" id="r-emp" placeholder="Adm. Silva Ltda" required></div>
-    </div>
     <div class="fg">
-      <label class="fl">CNPJ * <span style="color:var(--green3);font-weight:normal;cursor:pointer;font-size:9px" onclick="buscarCNPJ('r')">(buscar automático)</span></label>
-      <input class="fi" id="r-cnpj" placeholder="00.000.000/0001-00" required oninput="if(this.value.replace(/\D/g,'').length===14)buscarCNPJ('r')">
-      <div class="cnpj-loading" id="r-cnpj-loading"><span class="sp"></span> Buscando...</div>
-      <div class="cnpj-ok" id="r-cnpj-ok"><i class="ti ti-check"></i> Dados preenchidos</div>
+      <label class="fl">CNPJ <span style="color:var(--ghost);cursor:pointer;font-weight:400" onclick="buscarCNPJ('r')">(buscar automático)</span></label>
+      <input class="fi" id="r-cnpj" placeholder="00.000.000/0001-00" oninput="if(this.value.replace(/\D/g,'').length===14)buscarCNPJ('r')">
+      <div class="cnpj-ok" id="r-cnpj-ok"><i class="ti ti-check"></i> Dados preenchidos automaticamente</div>
     </div>
+    <div class="fr"><div class="fg"><label class="fl">Seu nome *</label><input class="fi" id="r-nome" required></div><div class="fg"><label class="fl">Nome da empresa *</label><input class="fi" id="r-emp" required></div></div>
     <div class="fg"><label class="fl">Email *</label><input class="fi" id="r-email" type="email" required></div>
-    <div class="fg"><label class="fl">Senha * (mínimo 8 caracteres)</label><input class="fi" id="r-senha" type="password" required minlength="8"></div>
-    <div class="fg"><label class="fl">Confirmar senha *</label><input class="fi" id="r-senha2" type="password" required minlength="8"><div class="ferr" id="r-senha-err">Senhas não conferem</div></div>
+    <div class="fg"><label class="fl">Senha *</label><input class="fi" id="r-senha" type="password" required minlength="8"></div>
+    <div class="fg"><label class="fl">Confirmar senha *</label><input class="fi" id="r-senha2" type="password" required><div class="ferr" id="r-serr">Senhas não conferem</div></div>
   </div>
   <div class="mf"><button class="btn" onclick="closeM('m-reg')">Cancelar</button><button class="btn btnp" onclick="doReg()"><i class="ti ti-check"></i>Cadastrar</button></div>
 </div></div>
@@ -398,85 +640,73 @@ tr:hover td{background:#ffffff05}
   <div class="mh"><span class="mt2">Nova administradora</span><button class="btn" onclick="closeM('m-tenant')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
     <div class="fg">
-      <label class="fl">CNPJ * <span style="color:var(--green3);font-weight:normal;cursor:pointer;font-size:9px" onclick="buscarCNPJ('t')">(buscar automático)</span></label>
-      <input class="fi" id="t-cnpj" placeholder="00.000.000/0001-00" required oninput="if(this.value.replace(/\D/g,'').length===14)buscarCNPJ('t')">
-      <div class="cnpj-loading" id="t-cnpj-loading"><span class="sp"></span> Buscando...</div>
-      <div class="cnpj-ok" id="t-cnpj-ok"><i class="ti ti-check"></i> Dados preenchidos</div>
+      <label class="fl">CNPJ <span style="color:var(--ghost);cursor:pointer;font-weight:400" onclick="buscarCNPJ('t')">(buscar automático)</span></label>
+      <input class="fi" id="t-cnpj" placeholder="00.000.000/0001-00" oninput="if(this.value.replace(/\D/g,'').length===14)buscarCNPJ('t')">
+      <div class="cnpj-ok" id="t-cnpj-ok"><i class="ti ti-check"></i> Preenchido automaticamente</div>
     </div>
-    <div class="fg"><label class="fl">Nome da empresa *</label><input class="fi" id="t-nome" placeholder="Preenchido automaticamente" required></div>
+    <div class="fg"><label class="fl">Nome *</label><input class="fi" id="t-nome" required></div>
     <div class="fg"><label class="fl">Email *</label><input class="fi" id="t-email" type="email" required></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Cidade</label><input class="fi" id="t-cidade"></div>
-      <div class="fg"><label class="fl">UF</label><input class="fi" id="t-uf" maxlength="2"></div>
-    </div>
+    <div class="fr"><div class="fg"><label class="fl">Cidade</label><input class="fi" id="t-cidade"></div><div class="fg"><label class="fl">UF</label><input class="fi" id="t-uf" maxlength="2"></div></div>
     <div class="fg"><label class="fl">Endereço</label><input class="fi" id="t-end"></div>
-    <div class="fg"><label class="fl">CEP</label><input class="fi" id="t-cep"></div>
   </div>
-  <div class="mf"><button class="btn" onclick="closeM('m-tenant')">Cancelar</button><button class="btn btnp" onclick="doCreateTenant()"><i class="ti ti-plus"></i>Criar</button></div>
+  <div class="mf"><button class="btn" onclick="closeM('m-tenant')">Cancelar</button><button class="btn btnp" onclick="doCreateTenant()">Criar</button></div>
 </div></div>
 
 <div id="m-condo" class="mo" style="display:none" onclick="closeM('m-condo')"><div class="md2" onclick="e()">
   <div class="mh"><span class="mt2">Novo condomínio</span><button class="btn" onclick="closeM('m-condo')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
     <div class="fg">
-      <label class="fl">CNPJ <span style="color:var(--green3);font-weight:normal;cursor:pointer;font-size:9px" onclick="buscarCNPJ('c')">(buscar automático)</span></label>
+      <label class="fl">CNPJ <span style="color:var(--ghost);cursor:pointer;font-weight:400" onclick="buscarCNPJ('c')">(buscar automático)</span></label>
       <input class="fi" id="c-cnpj" placeholder="00.000.000/0001-00" oninput="if(this.value.replace(/\D/g,'').length===14)buscarCNPJ('c')">
-      <div class="cnpj-loading" id="c-cnpj-loading"><span class="sp"></span> Buscando...</div>
-      <div class="cnpj-ok" id="c-cnpj-ok"><i class="ti ti-check"></i> Dados preenchidos</div>
+      <div class="cnpj-ok" id="c-cnpj-ok"><i class="ti ti-check"></i> Preenchido</div>
     </div>
-    <div class="fg"><label class="fl">Nome do condomínio *</label><input class="fi" id="c-nome" placeholder="Residencial das Flores" required></div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Cidade</label><input class="fi" id="c-cidade"></div>
-      <div class="fg"><label class="fl">UF</label><input class="fi" id="c-uf" maxlength="2"></div>
-    </div>
+    <div class="fg"><label class="fl">Nome *</label><input class="fi" id="c-nome" required></div>
+    <div class="fr"><div class="fg"><label class="fl">Cidade</label><input class="fi" id="c-cidade"></div><div class="fg"><label class="fl">UF</label><input class="fi" id="c-uf" maxlength="2"></div></div>
     <div class="fg"><label class="fl">Endereço</label><input class="fi" id="c-end"></div>
-    <div class="fg"><label class="fl">CEP</label><input class="fi" id="c-cep"></div>
-    <div class="fg"><label class="fl">Total de unidades *</label><input class="fi" id="c-unid" type="number" min="1" placeholder="48" required></div>
+    <div class="fg"><label class="fl">Unidades *</label><input class="fi" id="c-unid" type="number" min="1" required></div>
   </div>
-  <div class="mf"><button class="btn" onclick="closeM('m-condo')">Cancelar</button><button class="btn btnp" onclick="doCreateCondo()"><i class="ti ti-plus"></i>Criar</button></div>
+  <div class="mf"><button class="btn" onclick="closeM('m-condo')">Cancelar</button><button class="btn btnp" onclick="doCreateCondo()">Criar</button></div>
 </div></div>
 
 <div id="m-lanc" class="mo" style="display:none" onclick="closeM('m-lanc')"><div class="md2" onclick="e()">
   <div class="mh"><span class="mt2">Novo lançamento</span><button class="btn" onclick="closeM('m-lanc')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
-    <div class="fg"><label class="fl">Descrição *</label><input class="fi" id="l-desc" placeholder="Taxa condominial Apto 101" required></div>
+    <div class="fg"><label class="fl">Descrição *</label><input class="fi" id="l-desc" required></div>
     <div class="fr">
-      <div class="fg"><label class="fl">Tipo *</label><select class="fi" id="l-tipo" required><option value="receita">Receita</option><option value="despesa">Despesa</option><option value="imposto">Imposto (DARF/DAS)</option></select></div>
-      <div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="l-val" type="number" step="0.01" min="0.01" placeholder="850.00" required></div>
+      <div class="fg"><label class="fl">Tipo</label><select class="fi" id="l-tipo"><option value="receita">Receita</option><option value="despesa">Despesa</option><option value="imposto">Imposto</option></select></div>
+      <div class="fg"><label class="fl">Valor (R$) *</label><input class="fi" id="l-val" type="number" step="0.01" min="0.01" required></div>
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">Vencimento *</label><input class="fi" id="l-venc" type="date" required></div>
-      <div class="fg"><label class="fl">Mês referência</label><input class="fi" id="l-mes" type="month"></div>
+      <div class="fg"><label class="fl">Mês ref.</label><input class="fi" id="l-mes" type="month"></div>
     </div>
   </div>
-  <div class="mf"><button class="btn" onclick="closeM('m-lanc')">Cancelar</button><button class="btn btnp" onclick="doCreateLanc()"><i class="ti ti-plus"></i>Criar</button></div>
+  <div class="mf"><button class="btn" onclick="closeM('m-lanc')">Cancelar</button><button class="btn btnp" onclick="doCreateLanc()">Criar</button></div>
 </div></div>
 
 <div id="m-usr" class="mo" style="display:none" onclick="closeM('m-usr')"><div class="md2" onclick="e()">
   <div class="mh"><span class="mt2">Novo usuário</span><button class="btn" onclick="closeM('m-usr')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
-    <div class="fg"><label class="fl">Nome *</label><input class="fi" id="u-nome" placeholder="Maria Silva" required></div>
+    <div class="fg"><label class="fl">Nome *</label><input class="fi" id="u-nome" required></div>
     <div class="fg"><label class="fl">Email *</label><input class="fi" id="u-email" type="email" required></div>
-    <div class="fg"><label class="fl">Senha * (mínimo 8 caracteres)</label><input class="fi" id="u-senha" type="password" required minlength="8"></div>
-    <div class="fg"><label class="fl">Confirmar senha *</label><input class="fi" id="u-senha2" type="password" required minlength="8"><div class="ferr" id="u-senha-err">Senhas não conferem</div></div>
-    <div class="fg"><label class="fl">Nível *</label><select class="fi" id="u-role" onchange="toggleCondoField()" required><option value="operador">Operador</option><option value="gerente">Gerente</option><option value="admin_tenant">Admin</option><option value="sindico">Síndico</option><option value="morador">Morador</option></select></div>
-    <div class="fg" id="fg-condo-usr" style="display:none"><label class="fl">Condomínio *</label><select class="fi" id="u-condo"><option value="">— Selecionar —</option></select></div>
+    <div class="fg"><label class="fl">Senha *</label><input class="fi" id="u-senha" type="password" required minlength="8"></div>
+    <div class="fg"><label class="fl">Confirmar senha *</label><input class="fi" id="u-senha2" type="password" required><div class="ferr" id="u-serr">Senhas não conferem</div></div>
+    <div class="fg"><label class="fl">Role</label><select class="fi" id="u-role" onchange="toggleCondoField()"><option value="operador">Operador</option><option value="gerente">Gerente</option><option value="admin_tenant">Admin</option><option value="sindico">Síndico</option><option value="morador">Morador</option></select></div>
+    <div class="fg" id="fg-condo-usr" style="display:none"><label class="fl">Condomínio</label><select class="fi" id="u-condo"><option value="">— Selecionar —</option></select></div>
   </div>
-  <div class="mf"><button class="btn" onclick="closeM('m-usr')">Cancelar</button><button class="btn btnp" onclick="doCreateUser()"><i class="ti ti-plus"></i>Criar</button></div>
+  <div class="mf"><button class="btn" onclick="closeM('m-usr')">Cancelar</button><button class="btn btnp" onclick="doCreateUser()">Criar</button></div>
 </div></div>
 
 <div id="m-perfil" class="mo" style="display:none" onclick="closeM('m-perfil')"><div class="md2" style="width:340px" onclick="e()">
-  <div class="mh"><span class="mt2">Meu perfil</span><button class="btn" onclick="closeM('m-perfil')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
+  <div class="mh"><span class="mt2">Perfil</span><button class="btn" onclick="closeM('m-perfil')" style="padding:3px 7px"><i class="ti ti-x"></i></button></div>
   <div class="mb2">
-    <div style="text-align:center;margin-bottom:14px">
-      <div class="av av-sa" style="width:44px;height:44px;font-size:16px;margin:0 auto 7px" id="p-av">—</div>
-      <div style="font-weight:600;font-size:14px" id="p-nome">—</div>
-      <div style="font-size:11px;color:var(--text2)" id="p-email">—</div>
-      <div style="margin-top:5px" id="p-role"></div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div class="av" style="width:40px;height:40px;font-size:14px" id="p-av">—</div>
+      <div><div style="font-size:14px;font-weight:700;color:var(--white)" id="p-nome">—</div><div style="font-size:10px;color:var(--dim);font-family:var(--font-narrow);margin-top:2px" id="p-email">—</div><div style="margin-top:5px" id="p-role"></div></div>
     </div>
-    <div style="height:1px;background:var(--border);margin:12px 0"></div>
-    <div class="fg"><label class="fl">Nova senha (mínimo 8 caracteres)</label><input class="fi" id="p-pwd" type="password" placeholder="Deixe vazio para manter" minlength="8"></div>
-    <div class="fg"><label class="fl">Confirmar nova senha</label><input class="fi" id="p-pwd2" type="password" placeholder="Confirme a nova senha"><div class="ferr" id="p-pwd-err">Senhas não conferem</div></div>
+    <div style="height:1px;background:var(--wire);margin:14px 0"></div>
+    <div class="fg"><label class="fl">Nova senha (mín. 8 caracteres)</label><input class="fi" id="p-pwd" type="password" placeholder="Deixe vazio para manter" minlength="8"></div>
+    <div class="fg"><label class="fl">Confirmar nova senha</label><input class="fi" id="p-pwd2" type="password"><div class="ferr" id="p-serr">Senhas não conferem</div></div>
   </div>
   <div class="mf">
     <button class="btn btnd" onclick="doLogout()"><i class="ti ti-logout"></i>Sair</button>
@@ -484,7 +714,6 @@ tr:hover td{background:#ffffff05}
   </div>
 </div></div>
 
-<!-- CONFIRM DIALOG -->
 <div id="m-confirm" class="mo" style="display:none"><div class="confirm-box">
   <div class="confirm-title" id="confirm-title">Confirmar ação</div>
   <div class="confirm-msg" id="confirm-msg">Tem certeza?</div>
@@ -494,16 +723,18 @@ tr:hover td{background:#ffffff05}
   </div>
 </div></div>
 
-<!-- TOUR -->
-<div id="tour-overlay" class="tour-overlay" style="display:none">
-  <div class="tour-box">
-    <div class="tour-step" id="tour-step">Passo 1 de 5</div>
-    <div class="tour-title" id="tour-title"></div>
-    <div class="tour-desc" id="tour-desc"></div>
-    <div class="tour-dots" id="tour-dots"></div>
-    <div style="display:flex;justify-content:space-between">
-      <button class="btn" onclick="tourSkip()">Pular tour</button>
-      <button class="btn btnp" onclick="tourNext()" id="tour-next-btn">Próximo <i class="ti ti-arrow-right"></i></button>
+<!-- ONBOARDING -->
+<div id="ob-overlay" class="ob-overlay" style="display:none">
+  <div class="ob-box">
+    <div class="ob-header">
+      <div class="ob-step-indicator" id="ob-dots"></div>
+      <div class="ob-title" id="ob-title"></div>
+      <div class="ob-desc" id="ob-desc"></div>
+    </div>
+    <div class="ob-body" id="ob-body"></div>
+    <div class="ob-footer">
+      <span class="ob-skip" onclick="skipOnboarding()">Pular configuração</span>
+      <button class="btn btnp" onclick="obNext()" id="ob-next-btn"><i class="ti ti-arrow-right"></i>Próximo</button>
     </div>
   </div>
 </div>
@@ -513,16 +744,11 @@ tr:hover td{background:#ffffff05}
 
 <script>
 const API='https://condofy-lvo3.onrender.com';
-let token=localStorage.getItem('cfy_tk');
-let user=JSON.parse(localStorage.getItem('cfy_us')||'null');
-let condos=[];
-let allTx=[];
-let allLanc=[];
-let txFilter='';
-let lancFilter='';
-let ctx=null;
-let charts={};
-let confirmResolve=null,confirmReject=null;
+let token=localStorage.getItem('d1_tk');
+let user=JSON.parse(localStorage.getItem('d1_us')||'null');
+let condos=[],allTx=[],allLanc=[],txFilter='',lancFilter='';
+let ctx=null,charts={},confirmResolve=null,confirmReject=null;
+let obStep=0;
 
 // ── HELPERS ──────────────────────────────────────────────────
 function e(){event.stopPropagation()}
@@ -531,9 +757,9 @@ async function api(method,path,body){
   const opts={method,headers:{'Content-Type':'application/json',...(token?{'Authorization':'Bearer '+token}:{})}};
   if(body)opts.body=JSON.stringify(body);
   const r=await fetch(API+path,opts);
-  if(r.status===401){doLogout();throw new Error('Sessão expirada. Faça login novamente.');}
+  if(r.status===401){doLogout();throw new Error('Sessão expirada.');}
   const d=await r.json();
-  if(!r.ok)throw new Error(d.detail||'Erro na requisição');
+  if(!r.ok)throw new Error(d.detail||'Erro');
   return d;
 }
 
@@ -541,7 +767,7 @@ function toast(msg,type='info',dur=3500){
   const t=document.createElement('div');
   t.className='toast '+type;
   const ico={success:'ti-check',error:'ti-x',info:'ti-info-circle'}[type]||'ti-info-circle';
-  t.innerHTML=`<i class="ti ${ico}"></i><span>${msg}</span>`;
+  t.innerHTML=`<i class="ti ${ico}" style="color:var(--${type==='success'?'green':type==='error'?'red':'blue'});flex-shrink:0"></i><span style="color:var(--ghost)">${msg}</span>`;
   document.getElementById('toasts').appendChild(t);
   setTimeout(()=>t.remove(),dur);
 }
@@ -554,50 +780,39 @@ function confirm2(title,msg,danger=true){
     confirmResolve=res;confirmReject=rej;
     document.getElementById('confirm-title').textContent=title;
     document.getElementById('confirm-msg').textContent=msg;
-    const btn=document.getElementById('confirm-ok-btn');
-    btn.className=danger?'btn btnd':'btn btnp';
     showM('m-confirm');
   });
 }
 
-// Validação de formulário
 function validar(campos){
   let ok=true;
   campos.forEach(([id,label])=>{
     const el=document.getElementById(id);
-    if(!el)return;
-    if(!el.value.trim()){toast(`${label} é obrigatório`,'error');ok=false;}
+    if(el&&!el.value.trim()){toast(`${label} é obrigatório`,'error');ok=false;}
   });
   return ok;
 }
 
-function validarSenhas(s1id,s2id,errid){
-  const s1=document.getElementById(s1id)?.value;
-  const s2=document.getElementById(s2id)?.value;
+function validarSenhas(s1,s2,errid){
+  const a=document.getElementById(s1)?.value;
+  const b=document.getElementById(s2)?.value;
   const err=document.getElementById(errid);
-  if(s1&&s2&&s1!==s2){if(err)err.style.display='block';return false;}
-  if(err)err.style.display='none';
-  return true;
+  if(a&&b&&a!==b){if(err)err.style.display='block';return false;}
+  if(err)err.style.display='none';return true;
 }
 
-// Busca em tabela
 function filterTable(tbId,q){
-  const rows=document.querySelectorAll(`#${tbId} tr`);
-  const ql=q.toLowerCase();
-  rows.forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(ql)?'':'none';});
+  document.querySelectorAll(`#${tbId} tr`).forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});
 }
 
-// Export CSV
-function exportCSV(tbId,filename){
+function exportCSV(tbId,name){
   const table=document.getElementById(tbId);
   if(!table){toast('Nada para exportar','error');return;}
-  const rows=Array.from(table.querySelectorAll('tr'));
-  const csv=rows.map(r=>Array.from(r.querySelectorAll('th,td')).map(c=>'"'+c.textContent.trim().replace(/"/g,'""')+'"').join(',')).join('\n');
+  const csv=Array.from(table.querySelectorAll('tr')).map(r=>Array.from(r.querySelectorAll('th,td')).map(c=>'"'+c.textContent.trim().replace(/"/g,'""')+'"').join(',')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-  a.download=filename+'_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  toast('CSV exportado!','success');
+  a.download=name+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();toast('CSV exportado!','success');
 }
 
 function toggleSidebar(){
@@ -607,166 +822,217 @@ function toggleSidebar(){
   ov.style.display=sb.classList.contains('open')?'block':'none';
 }
 
-// ── ROLES ─────────────────────────────────────────────────────
-const ROLES={super_admin:{label:'Super Admin',cls:'rb-sa',av:'av-sa'},admin_tenant:{label:'Admin',cls:'rb-ad',av:'av-ad'},gerente:{label:'Gerente',cls:'rb-ge',av:'av-ge'},operador:{label:'Operador',cls:'rb-op',av:'av-op'},sindico:{label:'Síndico',cls:'rb-si',av:'av-si'},morador:{label:'Morador',cls:'rb-mo',av:'av-mo'}};
+// ── ROLES ────────────────────────────────────────────────────
+const ROLES={
+  super_admin:{label:'Super Admin',cls:'rb-sa'},
+  admin_tenant:{label:'Admin',cls:'rb-ad'},
+  gerente:{label:'Gerente',cls:'rb-ge'},
+  operador:{label:'Operador',cls:'rb-op'},
+  sindico:{label:'Síndico',cls:'rb-si'},
+  morador:{label:'Morador',cls:'rb-mo'},
+};
 
 function buildSidebar(role){
   const menus={
-    super_admin:[{sec:'Principal',items:[{i:'ti-layout-dashboard',l:'Dashboard',p:'dash'},{i:'ti-building-bank',l:'Administradoras',p:'adms'}]},{sec:'Sistema',items:[{i:'ti-users',l:'Usuários',p:'usrs'},{i:'ti-settings',l:'Configurações',p:'cfg'}]}],
-    admin_tenant:[{sec:'Principal',items:[{i:'ti-layout-dashboard',l:'Dashboard',p:'dash'},{i:'ti-building',l:'Condomínios',p:'condos'}]},{sec:'Financeiro',items:[{i:'ti-credit-card',l:'Contas',p:'contas'},{i:'ti-arrows-exchange',l:'Conciliação',p:'concil'},{i:'ti-list',l:'Lançamentos',p:'lanc'}]},{sec:'Admin',items:[{i:'ti-users',l:'Usuários',p:'usrs'}]}],
-    gerente:[{sec:'Principal',items:[{i:'ti-layout-dashboard',l:'Dashboard',p:'dash'},{i:'ti-building',l:'Condomínios',p:'condos'}]},{sec:'Financeiro',items:[{i:'ti-arrows-exchange',l:'Conciliação',p:'concil'},{i:'ti-list',l:'Lançamentos',p:'lanc'}]}],
-    operador:[{sec:'Principal',items:[{i:'ti-layout-dashboard',l:'Dashboard',p:'dash'}]},{sec:'Financeiro',items:[{i:'ti-arrows-exchange',l:'Conciliação',p:'concil'},{i:'ti-list',l:'Lançamentos',p:'lanc'}]}],
-    sindico:[{sec:'Principal',items:[{i:'ti-layout-dashboard',l:'Dashboard',p:'dash'}]},{sec:'Financeiro',items:[{i:'ti-receipt',l:'Boletos',p:'boletos'},{i:'ti-activity',l:'Extrato',p:'extrato'},{i:'ti-list',l:'Lançamentos',p:'lanc'}]},{sec:'Condomínio',items:[{i:'ti-file-text',l:'Documentos',p:'docs'},{i:'ti-users',l:'Usuários',p:'usrs'}]}],
-    morador:[{sec:'Principal',items:[{i:'ti-layout-dashboard',l:'Dashboard',p:'dash'}]},{sec:'Minha conta',items:[{i:'ti-receipt',l:'Boletos',p:'boletos'},{i:'ti-file-text',l:'Documentos',p:'docs'}]}],
+    super_admin:[
+      {sec:'Principal',items:[
+        {i:'ti-layout-dashboard',l:'Visão geral',p:'dash'},
+        {i:'ti-building-bank',l:'Administradoras',p:'adms'},
+      ]},
+      {sec:'Sistema',items:[
+        {i:'ti-users',l:'Usuários',p:'usrs'},
+        {i:'ti-settings',l:'Configurações',p:'cfg'},
+      ]},
+    ],
+    admin_tenant:[
+      {sec:'Conciliação',items:[
+        {i:'ti-layout-dashboard',l:'Visão geral',p:'dash'},
+        {i:'ti-sparkles',l:'Conciliação',p:'concil',badge:'CORE'},
+        {i:'ti-building',l:'Condomínios',p:'condos'},
+      ]},
+      {sec:'Suporte',items:[
+        {i:'ti-list',l:'Lançamentos',p:'lanc'},
+        {i:'ti-users',l:'Usuários',p:'usrs'},
+        {i:'ti-settings',l:'Configurações',p:'cfg'},
+      ]},
+    ],
+    gerente:[
+      {sec:'Conciliação',items:[
+        {i:'ti-layout-dashboard',l:'Visão geral',p:'dash'},
+        {i:'ti-sparkles',l:'Conciliação',p:'concil',badge:'CORE'},
+        {i:'ti-building',l:'Condomínios',p:'condos'},
+      ]},
+      {sec:'Suporte',items:[
+        {i:'ti-list',l:'Lançamentos',p:'lanc'},
+      ]},
+    ],
+    operador:[
+      {sec:'Conciliação',items:[
+        {i:'ti-layout-dashboard',l:'Visão geral',p:'dash'},
+        {i:'ti-sparkles',l:'Conciliação',p:'concil',badge:'CORE'},
+      ]},
+      {sec:'Suporte',items:[
+        {i:'ti-list',l:'Lançamentos',p:'lanc'},
+      ]},
+    ],
   };
   const r=ctx?'admin_tenant':(menus[role]?role:'operador');
   let html='';
-  menus[r].forEach(s=>{
-    html+=`<div class="nsec"><div class="nl">${s.sec}</div>`;
-    s.items.forEach(it=>html+=`<div class="ni" onclick="nav('${it.p}')"><i class="ti ${it.i}"></i>${it.l}</div>`);
+  (menus[r]||menus.operador).forEach(s=>{
+    html+=`<div class="nav-section"><div class="nav-label">${s.sec}</div>`;
+    s.items.forEach(it=>html+=`<div class="ni" onclick="nav('${it.p}')"><i class="ti ${it.i}"></i>${it.l}${it.badge?`<span class="ni-badge">${it.badge}</span>`:''}</div>`);
     html+='</div><div class="ndiv"></div>';
   });
   html+=`<div class="nb"><div class="ndiv"></div><div class="ni" onclick="doLogout()"><i class="ti ti-logout"></i>Sair</div></div>`;
   document.getElementById('sidebar').innerHTML=html;
 }
 
-// ── AUTH ──────────────────────────────────────────────────────
+// ── AUTH ─────────────────────────────────────────────────────
 async function doLogin(){
   const btn=document.getElementById('btnl');
   const err=document.getElementById('lerr');
   err.style.display='none';
-  if(!document.getElementById('li-email').value||!document.getElementById('li-senha').value){
-    err.textContent='Preencha email e senha';err.style.display='block';return;
-  }
+  if(!document.getElementById('li-email').value||!document.getElementById('li-senha').value){err.textContent='Preencha email e senha';err.style.display='block';return;}
   btn.innerHTML='<span class="sp"></span>';btn.disabled=true;
   try{
     const d=await api('POST','/auth/login',{email:document.getElementById('li-email').value,senha:document.getElementById('li-senha').value});
     token=d.access_token;user=d.usuario;
-    localStorage.setItem('cfy_tk',token);localStorage.setItem('cfy_us',JSON.stringify(user));
+    localStorage.setItem('d1_tk',token);localStorage.setItem('d1_us',JSON.stringify(user));
     startApp();
   }catch(ex){err.textContent=ex.message;err.style.display='block';}
-  btn.innerHTML='<i class="ti ti-login"></i>Entrar';btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-login"></i>Entrar na plataforma';btn.disabled=false;
 }
 document.getElementById('li-senha').addEventListener('keydown',ev=>{if(ev.key==='Enter')doLogin();});
 
 async function doReg(){
-  if(!validar([['r-nome','Nome'],['r-emp','Nome da empresa'],['r-cnpj','CNPJ'],['r-email','Email'],['r-senha','Senha']]))return;
-  if(!validarSenhas('r-senha','r-senha2','r-senha-err'))return;
+  if(!validar([['r-nome','Nome'],['r-emp','Empresa'],['r-email','Email'],['r-senha','Senha']]))return;
+  if(!validarSenhas('r-senha','r-senha2','r-serr'))return;
   try{
     const d=await api('POST','/auth/registro-administradora',{nome:document.getElementById('r-nome').value,email:document.getElementById('r-email').value,senha:document.getElementById('r-senha').value,nome_empresa:document.getElementById('r-emp').value,cnpj:document.getElementById('r-cnpj').value.replace(/\D/g,'')});
     token=d.access_token;user=await api('GET','/auth/me');
-    localStorage.setItem('cfy_tk',token);localStorage.setItem('cfy_us',JSON.stringify(user));
-    closeM('m-reg');startApp();toast('Administradora criada com sucesso!','success');
+    localStorage.setItem('d1_tk',token);localStorage.setItem('d1_us',JSON.stringify(user));
+    closeM('m-reg');startApp();toast('Administradora criada!','success');
   }catch(ex){toast(ex.message,'error');}
 }
 
 function doLogout(){
-  localStorage.removeItem('cfy_tk');localStorage.removeItem('cfy_us');
+  localStorage.removeItem('d1_tk');localStorage.removeItem('d1_us');
   token=null;user=null;ctx=null;
   document.getElementById('app').style.display='none';
   document.getElementById('ls').style.display='flex';
-  toast('Sessão encerrada','info');
 }
 
-// ── START APP ─────────────────────────────────────────────────
+// ── START ────────────────────────────────────────────────────
 async function startApp(){
   document.getElementById('ls').style.display='none';
   document.getElementById('app').style.display='grid';
   const rc=ROLES[user.role]||ROLES.operador;
   const ini=user.nome.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
-  const av=document.getElementById('tb-av');
-  av.textContent=ini;av.className='av '+rc.av;
+  document.getElementById('tb-av').textContent=ini;
   document.getElementById('tb-nome').textContent=user.nome.split(' ')[0];
-  const rb=document.getElementById('tb-rb');
-  rb.textContent=rc.label;rb.className='rb '+rc.cls;
-  document.getElementById('p-av').textContent=ini;document.getElementById('p-av').className='av '+rc.av;
+  const rb=document.getElementById('tb-rb');rb.textContent=rc.label;rb.className='rb '+rc.cls;
+  document.getElementById('p-av').textContent=ini;
   document.getElementById('p-nome').textContent=user.nome;
   document.getElementById('p-email').textContent=user.email;
   document.getElementById('p-role').innerHTML=`<span class="rb ${rc.cls}">${rc.label}</span>`;
-  document.getElementById('cfg-cid').value=user.tenant_id||'Super Admin';
   buildSidebar(user.role);
-  const isFirst=!localStorage.getItem('cfy_toured');
-  if(isFirst){localStorage.setItem('cfy_toured','1');setTimeout(startTour,800);}
+  // Onboarding na primeira vez (não super admin)
+  const isFirst=!localStorage.getItem('d1_ob');
+  if(isFirst&&user.role!=='super_admin'){localStorage.setItem('d1_ob','1');setTimeout(startOnboarding,600);}
   await loadDash();
 }
 
-// ── NAV ───────────────────────────────────────────────────────
-const pageLoaders={adms:loadAdms,condos:loadCondos,contas:loadContas,concil:loadConcilPage,usrs:loadUsers};
+// ── NAV ──────────────────────────────────────────────────────
+const pageLoaders={adms:loadAdms,condos:loadCondos,concil:loadConcilPage,usrs:loadUsers,cfg:loadCfg};
 function nav(p){
   document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.ni').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p)?.classList.add('active');
   document.querySelectorAll('.ni').forEach(x=>{if(x.getAttribute('onclick')?.includes("'"+p+"'"))x.classList.add('active');});
   if(pageLoaders[p])pageLoaders[p]();
-  // Fecha sidebar mobile
   const sb=document.getElementById('sidebar');
   if(sb.classList.contains('open')){sb.classList.remove('open');document.getElementById('mob-overlay').style.display='none';}
 }
 
-// ── DASHBOARD ─────────────────────────────────────────────────
+// ── DASHBOARD ────────────────────────────────────────────────
 async function loadDash(){
-  document.getElementById('dash-sub').textContent=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('dash-body').innerHTML='<div class="tbl-loading"><span class="sp"></span> Carregando dashboard...</div>';
+  document.getElementById('dash-body').innerHTML='<div class="tbl-loading"><span class="sp"></span> Carregando...</div>';
   try{
-    if(user.role==='super_admin'&&!ctx)await dashSuperAdmin();
-    else if(['admin_tenant','gerente','operador'].includes(user.role)||ctx)await dashAdm();
-    else if(user.role==='sindico')await dashSindico();
-    else if(user.role==='morador')await dashMorador();
+    if(user.role==='super_admin'&&!ctx)await dashSuper();
+    else await dashAdm();
   }catch(ex){
-    document.getElementById('dash-body').innerHTML=`<div class="alert ay"><i class="ti ti-alert-circle"></i><div><b>Erro ao carregar</b><div>${ex.message}</div></div></div>`;
+    document.getElementById('dash-body').innerHTML=`<div class="alert ar"><i class="ti ti-alert-circle"></i><div>${ex.message}</div></div>`;
   }
 }
 
-async function dashSuperAdmin(){
-  document.getElementById('dash-title').textContent='Dashboard — Super Admin';
+async function dashSuper(){
   document.getElementById('tb-ctx').textContent='Visão global';
-  document.getElementById('dash-actions').innerHTML='';
   const d=await api('GET','/dashboard/super-admin');
   const m=d.metricas;
+  // Taxa de automação média estimada
+  const autoRate=d.metricas.total_pendentes_conciliacao===0?100:Math.max(0,Math.round(100-(m.total_pendentes_conciliacao/(m.total_condominios*10||1))*100));
+
   document.getElementById('dash-body').innerHTML=`
-  <div class="g4">
-    <div class="mc"><div class="ml">Administradoras</div><div class="mv">${m.total_administradoras}</div><div class="md">clientes ativos</div></div>
-    <div class="mc"><div class="ml">Condomínios</div><div class="mv">${m.total_condominios}</div><div class="md">gerenciados</div></div>
-    <div class="mc"><div class="ml">Usuários</div><div class="mv">${m.total_usuarios}</div><div class="md">cadastrados</div></div>
-    <div class="mc"><div class="ml">Pendentes concil.</div><div class="mv wa">${m.total_pendentes_conciliacao}</div><div class="md">transações</div></div>
+  <div style="margin-bottom:20px">
+    <div class="pt" style="margin-bottom:4px">Visão geral</div>
+    <div class="ps">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
   </div>
+
+  <div class="g4">
+    <div class="mc"><i class="ti ti-building-bank mc-icon"></i><div class="ml">Administradoras</div><div class="mv">${m.total_administradoras}</div><div class="md">clientes ativos</div></div>
+    <div class="mc"><i class="ti ti-building mc-icon"></i><div class="ml">Condomínios</div><div class="mv">${m.total_condominios}</div><div class="md">gerenciados</div></div>
+    <div class="mc"><i class="ti ti-sparkles mc-icon"></i><div class="ml">Automação</div><div class="mv up">${autoRate}%</div><div class="md">taxa de match auto</div></div>
+    <div class="mc"><i class="ti ti-clock mc-icon"></i><div class="ml">Pendentes</div><div class="mv wa">${m.total_pendentes_conciliacao}</div><div class="md">aguardando revisão</div></div>
+  </div>
+
   <div class="g2">
     <div class="card">
-      <div class="ch">Top administradoras por condomínios</div>
+      <div class="ch"><i class="ti ti-chart-bar"></i>Condomínios por administradora</div>
       <div class="leg" id="lg1"></div>
       <div style="position:relative;height:180px"><canvas id="ch1"></canvas></div>
     </div>
     <div class="card">
-      <div class="ch"><i class="ti ti-bell" style="color:var(--yellow);margin-right:5px"></i>Alertas do sistema</div>
+      <div class="ch"><i class="ti ti-bell"></i>Alertas do sistema</div>
       <div id="sa-alerts"></div>
     </div>
   </div>
-  <div class="card" style="padding:0">
-    <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:12px;font-weight:600">Todas as administradoras</span>
+
+  <div class="tbl-wrap">
+    <div class="tbl-header">
+      <span class="tbl-title">Administradoras</span>
       <span class="export-btn" onclick="exportCSV('tb-sa-adms','administradoras')"><i class="ti ti-download"></i>CSV</span>
     </div>
-    <div style="padding:8px 14px 0"><div class="search-bar"><i class="ti ti-search"></i><input placeholder="Buscar..." oninput="filterTable('tb-sa-adms',this.value)"></div></div>
+    <div style="padding:10px 14px 0">
+      <div class="search-bar"><i class="ti ti-search"></i><input placeholder="Buscar..." oninput="filterTable('tb-sa-adms',this.value)"></div>
+    </div>
     <table><thead><tr><th>#</th><th>Nome</th><th>CNPJ</th><th>Condomínios</th><th>Alertas</th><th>Ação</th></tr></thead>
     <tbody id="tb-sa-adms"></tbody></table>
   </div>
+
   <div class="card" style="margin-top:4px">
-    <div class="ch" style="margin-bottom:10px"><i class="ti ti-map-pin" style="margin-right:5px"></i>Mapa <span class="badge bb" style="margin-left:4px"><span class="dot" style="background:#58a6ff"></span>Administradoras</span> <span class="badge bg" style="margin-left:4px"><span class="dot dg"></span>Condomínios</span></div>
+    <div class="ch"><i class="ti ti-map-pin"></i>Mapa de cobertura
+      <span class="badge bb" style="margin-left:6px"><span class="dot" style="background:var(--blue);display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:3px"></span>Administradoras</span>
+      <span class="badge bg" style="margin-left:4px"><span class="dot" style="background:var(--green);display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:3px"></span>Condomínios</span>
+    </div>
     <div id="map1" class="map-wrap" style="height:280px"></div>
   </div>`;
 
-  const top=d.administradoras.slice(0,6);
-  document.getElementById('lg1').innerHTML=legHTML([['#58a6ff','Condomínios']]);
-  mkChart('ch1',{type:'bar',data:{labels:top.map(t=>t.nome.substring(0,12)),datasets:[{label:'Condomínios',data:top.map(t=>t.n_condominios),backgroundColor:'#58a6ff',borderRadius:4,borderSkipped:false}]},options:{...bOpts,plugins:{...bOpts.plugins,tooltip:{...bOpts.plugins.tooltip,callbacks:{label:v=>v.raw+' condomínios'}}}}});
+  const top=d.administradoras.slice(0,8);
+  document.getElementById('lg1').innerHTML=legHTML([['#c8cdd6','Condomínios']]);
+  mkChart('ch1',{type:'bar',data:{labels:top.map(t=>t.nome.substring(0,14)),datasets:[{label:'Condomínios',data:top.map(t=>t.n_condominios),backgroundColor:'rgba(200,205,214,.7)',borderRadius:3,borderSkipped:false}]},options:{...bOpts,plugins:{...bOpts.plugins,tooltip:{...bOpts.plugins.tooltip,callbacks:{label:v=>v.raw+' condomínios'}}}}});
 
   const ae=document.getElementById('sa-alerts');
-  ae.innerHTML=d.alertas.length===0?'<div class="alert ag"><i class="ti ti-check"></i><div><b>Tudo em ordem</b></div></div>':d.alertas.map(a=>`<div class="alert ay"><i class="ti ti-plug-x"></i><div><b>${a.nome}</b><div>${a.contas_desconectadas} conta(s) desconectada(s)</div></div></div>`).join('');
+  ae.innerHTML=d.alertas.length===0
+    ?'<div class="alert ag"><i class="ti ti-check"></i><div><b>Sistema operando normalmente</b></div></div>'
+    :d.alertas.map(a=>`<div class="alert ay"><i class="ti ti-plug-x"></i><div><b>${a.nome}</b><div>${a.contas_desconectadas} conta(s) desconectada(s)</div></div></div>`).join('');
 
   document.getElementById('tb-sa-adms').innerHTML=d.administradoras.map((a,i)=>`<tr>
-    <td class="mono">${i+1}</td><td><b>${a.nome}</b></td><td class="mono">${a.cnpj}</td>
+    <td class="mono">${i+1}</td>
+    <td style="color:var(--light);font-weight:500">${a.nome}</td>
+    <td class="mono">${a.cnpj}</td>
     <td><span class="badge bb">${a.n_condominios}</span></td>
     <td>${a.contas_desconectadas>0?`<span class="badge br"><span class="dot dr"></span>${a.contas_desconectadas}</span>`:'<span class="badge bg"><span class="dot dg"></span>OK</span>'}</td>
-    <td><button class="btn btns" style="font-size:10px;padding:4px 8px" onclick="entrarContexto('${a.id}','${a.nome.replace(/'/g,"\\'")}')"><i class="ti ti-login"></i>Entrar</button></td>
+    <td><button class="btn btns" style="font-size:9px;padding:3px 8px" onclick="entrarContexto('${a.id}','${a.nome.replace(/'/g,"\\'")}')"><i class="ti ti-login"></i>Entrar</button></td>
   </tr>`).join('');
 
   drawMap('map1',d.administradoras.map((a,i)=>({label:a.nome,city:(a.cidade&&a.estado?a.cidade+'/'+a.estado:'Administradora'),type:'adm',idx:i,lat:a.lat,lng:a.lng,state:a.estado})));
@@ -778,14 +1044,13 @@ async function entrarContexto(tenantId,nome){
   buildSidebar('admin_tenant');
   let banner=document.getElementById('ctx-banner');
   if(!banner){banner=document.createElement('div');banner.id='ctx-banner';banner.style.cssText='padding:0 0 0;';document.getElementById('main-content').insertBefore(banner,document.getElementById('main-content').firstChild);}
-  banner.innerHTML=`<div class="ctx-banner"><span class="ctx-info"><i class="ti ti-eye" style="margin-right:5px"></i>Visualizando: <b>${nome}</b></span><button class="ctx-btn" onclick="sairContexto()"><i class="ti ti-arrow-left"></i>Voltar</button></div>`;
+  banner.innerHTML=`<div class="ctx-banner"><span class="ctx-info"><i class="ti ti-eye" style="margin-right:5px"></i>Visualizando: <b style="color:var(--ghost)">${nome}</b></span><button class="ctx-btn" onclick="sairContexto()">↩ Voltar</button></div>`;
   await dashAdm();
 }
 
 function sairContexto(){
   ctx=null;
-  const banner=document.getElementById('ctx-banner');
-  if(banner)banner.remove();
+  document.getElementById('ctx-banner')?.remove();
   document.getElementById('tb-ctx').textContent='Visão global';
   buildSidebar('super_admin');
   loadDash();
@@ -793,157 +1058,130 @@ function sairContexto(){
 
 async function dashAdm(){
   const tid=ctx?ctx.tenantId:user.tenant_id;
-  document.getElementById('dash-title').textContent='Dashboard';
   const [d,t]=await Promise.all([api('GET',`/tenants/${tid}/dashboard`),api('GET',`/tenants/${tid}`)]);
   if(!ctx)document.getElementById('tb-ctx').textContent=t.nome.substring(0,20);
   const m=d.metricas;
   condos=d.condominios;
-  ['concil-sel','lanc-sel'].forEach(id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">— Condomínio —</option>';d.condominios.forEach(c=>s.innerHTML+=`<option value="${c.id}">${c.nome}</option>`);});
-  const uc=document.getElementById('u-condo');
-  if(uc){uc.innerHTML='<option value="">— Selecionar —</option>';d.condominios.forEach(c=>uc.innerHTML+=`<option value="${c.id}">${c.nome}</option>`);}
+  populateCondoSelects(condos);
+
+  // KPIs de conciliação
+  const totalTx=d.condominios.reduce((s,c)=>s+c.pendentes_conciliacao,0);
+  const totalConds=d.condominios.length;
+  const concRate=totalTx===0?100:Math.max(0,100-Math.round((totalTx/(totalConds*15||1))*100));
+  const horasSalvas=Math.round(totalConds*2.5); // estimativa: 2.5h/cond/mês
 
   document.getElementById('dash-body').innerHTML=`
-  <div class="g4">
-    <div class="mc"><div class="ml">Condomínios</div><div class="mv">${m.total_condominios}</div><div class="md">ativos</div></div>
-    <div class="mc"><div class="ml">Unidades</div><div class="mv">${m.total_unidades.toLocaleString('pt-BR')}</div><div class="md">cadastradas</div></div>
-    <div class="mc"><div class="ml">Saldo total</div><div class="mv up">R$ ${(m.total_saldo/1000).toFixed(0)}k</div><div class="md">todas as contas</div></div>
-    <div class="mc"><div class="ml">Pendentes</div><div class="mv wa">${m.pendentes_conciliacao}</div><div class="md">conciliação</div></div>
+  <div style="margin-bottom:20px">
+    <div class="pt" style="margin-bottom:4px">${t.nome}</div>
+    <div class="ps">${new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
   </div>
+
+  <!-- HERO CONCILIAÇÃO -->
+  <div class="concil-hero" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+      <div>
+        <div class="concil-score" style="display:inline-block;text-align:center">
+          <svg width="80" height="80" class="concil-score-ring">
+            <circle cx="40" cy="40" r="34" stroke="var(--wire)" stroke-width="4" fill="none"/>
+            <circle cx="40" cy="40" r="34" stroke="var(--silver)" stroke-width="4" fill="none"
+              stroke-dasharray="${2*Math.PI*34}" stroke-dashoffset="${2*Math.PI*34*(1-concRate/100)}"
+              stroke-linecap="round"/>
+          </svg>
+          <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+            <div style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--white);line-height:1">${concRate}%</div>
+            <div style="font-size:7px;color:var(--dim);font-family:var(--font-narrow);letter-spacing:.08em;text-transform:uppercase;margin-top:1px">Auto</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-size:11px;font-weight:600;color:var(--ghost);letter-spacing:.04em;text-transform:uppercase;font-family:var(--font-narrow);margin-bottom:6px">Taxa de automação este mês</div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap">
+          <div><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--white);line-height:1">${horasSalvas}h</div><div style="font-size:9px;color:var(--dim);font-family:var(--font-narrow);letter-spacing:.06em;text-transform:uppercase;margin-top:3px">Economia estimada</div></div>
+          <div><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--white);line-height:1">${totalTx}</div><div style="font-size:9px;color:var(--yellow);font-family:var(--font-narrow);letter-spacing:.06em;text-transform:uppercase;margin-top:3px">Pendentes revisão</div></div>
+          <div><div style="font-size:28px;font-weight:700;font-family:var(--mono);color:var(--white);line-height:1">${totalConds}</div><div style="font-size:9px;color:var(--dim);font-family:var(--font-narrow);letter-spacing:.06em;text-transform:uppercase;margin-top:3px">Condomínios ativos</div></div>
+        </div>
+      </div>
+      <div>
+        <button class="btn btnp" onclick="nav('concil')" style="padding:10px 16px">
+          <i class="ti ti-sparkles"></i>Ir para conciliação
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div class="g2">
     <div class="card">
-      <div class="ch">Saldo por condomínio</div>
+      <div class="ch"><i class="ti ti-building"></i>Condomínios — pendências</div>
       <div class="leg" id="lg2"></div>
-      <div style="position:relative;height:180px"><canvas id="ch2"></canvas></div>
+      <div style="position:relative;height:160px"><canvas id="ch2"></canvas></div>
     </div>
     <div class="card">
-      <div class="ch"><i class="ti ti-bell" style="color:var(--yellow);margin-right:5px"></i>Alertas operacionais</div>
+      <div class="ch"><i class="ti ti-bell"></i>Alertas operacionais</div>
       <div id="adm-alerts"></div>
     </div>
   </div>
-  <div class="card" style="padding:0">
-    <div style="padding:12px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-      <span style="font-size:12px;font-weight:600">Condomínios</span>
-    </div>
-    <table><thead><tr><th>Nome</th><th>Cidade/UF</th><th>Unidades</th><th>Saldo</th><th>Pendentes</th><th>Ação</th></tr></thead>
+
+  <div class="tbl-wrap">
+    <div class="tbl-header"><span class="tbl-title">Condomínios sob gestão</span></div>
+    <table><thead><tr><th>Condomínio</th><th>Cidade / UF</th><th>Unidades</th><th>Saldo</th><th>Pendentes</th><th>Ação</th></tr></thead>
     <tbody id="tb-dash-conds"></tbody></table>
   </div>`;
 
-  const cs=d.condominios.filter(c=>c.saldo>0).slice(0,8);
-  document.getElementById('lg2').innerHTML=legHTML([['#4ade80','Saldo R$']]);
-  mkChart('ch2',{type:'bar',data:{labels:cs.map(c=>c.nome.substring(0,12)),datasets:[{label:'Saldo',data:cs.map(c=>c.saldo),backgroundColor:'#1D9E75',borderRadius:4,borderSkipped:false}]},options:{...bOpts,plugins:{...bOpts.plugins,tooltip:{...bOpts.plugins.tooltip,callbacks:{label:v=>'R$ '+v.raw.toLocaleString('pt-BR',{minimumFractionDigits:2})}}}}});
+  const pendentes=d.condominios.filter(c=>c.pendentes_conciliacao>0).slice(0,8);
+  document.getElementById('lg2').innerHTML=legHTML([['rgba(200,205,214,.6)','Pendentes conciliação']]);
+  mkChart('ch2',{type:'bar',data:{labels:d.condominios.slice(0,8).map(c=>c.nome.substring(0,12)),datasets:[{label:'Pendentes',data:d.condominios.slice(0,8).map(c=>c.pendentes_conciliacao),backgroundColor:d.condominios.slice(0,8).map(c=>c.pendentes_conciliacao>0?'rgba(245,158,11,.7)':'rgba(200,205,214,.3)'),borderRadius:3,borderSkipped:false}]},options:{...bOpts}});
 
   const aa=document.getElementById('adm-alerts');
   const als=[];
-  if(d.alertas.contas_desconectadas>0)als.push(`<div class="alert ar"><i class="ti ti-plug-x"></i><div><b>${d.alertas.contas_desconectadas} conta(s) desconectada(s)</b></div></div>`);
-  if(d.alertas.pendentes_conciliacao>0)als.push(`<div class="alert ay"><i class="ti ti-arrows-exchange"></i><div><b>${d.alertas.pendentes_conciliacao} transação(ões) pendentes</b></div></div>`);
-  if(als.length===0)als.push('<div class="alert ag"><i class="ti ti-check"></i><div><b>Tudo em ordem</b></div></div>');
+  if(d.alertas.contas_desconectadas>0)als.push(`<div class="alert ar"><i class="ti ti-plug-x"></i><div><b>${d.alertas.contas_desconectadas} conta(s) desconectada(s)</b><div>Reconecte via Pluggy em Configurações</div></div></div>`);
+  if(d.alertas.pendentes_conciliacao>0)als.push(`<div class="alert ay"><i class="ti ti-sparkles"></i><div><b>${d.alertas.pendentes_conciliacao} transações aguardando revisão</b><div><span style="cursor:pointer;text-decoration:underline" onclick="nav('concil')">Ir para conciliação →</span></div></div></div>`);
+  if(als.length===0)als.push('<div class="alert ag"><i class="ti ti-check"></i><div><b>Tudo conciliado</b><div>Nenhuma pendência neste momento</div></div></div>');
   aa.innerHTML=als.join('');
 
   document.getElementById('tb-dash-conds').innerHTML=d.condominios.map(c=>`<tr>
-    <td><b>${c.nome}</b></td><td>${c.cidade||'—'}/${c.estado||'—'}</td><td>${c.total_unidades}</td>
+    <td style="color:var(--light);font-weight:500">${c.nome}</td>
+    <td>${c.cidade||'—'}/${c.estado||'—'}</td>
+    <td>${c.total_unidades}</td>
     <td><span class="amt c">R$ ${c.saldo.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
     <td>${c.pendentes_conciliacao>0?`<span class="badge by"><span class="dot dy"></span>${c.pendentes_conciliacao}</span>`:'<span class="badge bg"><span class="dot dg"></span>0</span>'}</td>
-    <td><button class="btn" style="font-size:10px;padding:4px 8px" onclick="dashCondo('${c.id}')"><i class="ti ti-chart-bar"></i>Dashboard</button></td>
+    <td><button class="btn" style="font-size:9px;padding:3px 8px" onclick="irConciliarCondo('${c.id}')"><i class="ti ti-sparkles"></i>Conciliar</button></td>
   </tr>`).join('');
 }
 
-async function dashCondo(condoId){
-  const tid=ctx?ctx.tenantId:user.tenant_id;
-  document.getElementById('dash-body').innerHTML='<div class="tbl-loading"><span class="sp"></span> Carregando...</div>';
-  const d=await api('GET',`/tenants/${tid}/condominios/${condoId}/dashboard`);
-  const m=d.metricas;const co=d.condominio;
-  document.getElementById('dash-body').innerHTML=`
-  <div class="breadcrumb" style="margin-bottom:14px">
-    <span onclick="dashAdm()">Dashboard</span><i class="ti ti-chevron-right"></i><span>${co.nome}</span>
-  </div>
-  <div class="g4">
-    <div class="mc"><div class="ml">Saldo</div><div class="mv up">R$ ${(m.saldo_total/1000).toFixed(1)}k</div></div>
-    <div class="mc"><div class="ml">Receitas</div><div class="mv up">R$ ${m.receita_mes.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div></div>
-    <div class="mc"><div class="ml">Despesas</div><div class="mv dn">R$ ${m.despesa_mes.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div></div>
-    <div class="mc"><div class="ml">Pendentes</div><div class="mv wa">${m.pendentes_conciliacao}</div></div>
-  </div>
-  <div class="g2">
-    <div class="card">
-      <div class="ch"><i class="ti ti-calendar" style="color:var(--yellow);margin-right:5px"></i>Próximos vencimentos</div>
-      ${d.proximos_vencimentos.length===0?'<div class="empty"><i class="ti ti-calendar-check"></i><p>Nenhum nos próximos 30 dias</p></div>':d.proximos_vencimentos.map(v=>`<div class="row"><div><div class="rl">${v.descricao}${v.parcela?' <span class="tag">'+v.parcela+'</span>':''}</div><div class="rs">Vence ${new Date(v.data_vencimento+'T00:00:00').toLocaleDateString('pt-BR')}</div></div><div class="amt d">R$ ${v.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>`).join('')}
-    </div>
-    <div class="card">
-      <div class="ch"><i class="ti ti-receipt" style="color:var(--green3);margin-right:5px"></i>Últimas transações</div>
-      ${d.ultimas_transacoes.length===0?'<div class="empty"><i class="ti ti-arrows-exchange"></i><p>Sem transações</p></div>':d.ultimas_transacoes.map(t=>`<div class="row"><div><div class="rl">${t.descricao}</div><div class="rs">${t.data}</div></div><div style="display:flex;align-items:center;gap:5px"><span class="amt ${t.tipo==='credito'?'c':'d'}">${t.tipo==='debito'?'−':'+'}R$ ${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>${t.status==='conciliada'?'<span class="badge bg" style="font-size:9px">OK</span>':'<span class="badge by" style="font-size:9px">Pend.</span>'}</div></div>`).join('')}
-    </div>
-  </div>
-  <div class="card">
-    <div class="ch"><i class="ti ti-activity" style="color:var(--blue);margin-right:5px"></i>Saúde financeira</div>
-    ${m.saldo_total<10000?'<div class="alert ar"><i class="ti ti-alert-circle"></i><div><b>Saldo baixo — abaixo de R$ 10.000</b></div></div>':'<div class="alert ag"><i class="ti ti-check"></i><div><b>Saldo saudável</b></div></div>'}
-    ${m.pendentes_conciliacao>5?`<div class="alert ay"><i class="ti ti-arrows-exchange"></i><div><b>${m.pendentes_conciliacao} transações pendentes de conciliação</b></div></div>`:''}
-    ${m.saldo_mes>=0?`<div class="alert ag"><i class="ti ti-trending-up"></i><div><b>Mês positivo: +R$ ${m.saldo_mes.toLocaleString('pt-BR',{minimumFractionDigits:2})}</b></div></div>`:`<div class="alert ar"><i class="ti ti-trending-down"></i><div><b>Déficit: −R$ ${Math.abs(m.saldo_mes).toLocaleString('pt-BR',{minimumFractionDigits:2})}</b></div></div>`}
-  </div>`;
+function irConciliarCondo(condoId){
+  nav('concil');
+  setTimeout(()=>{
+    const sel=document.getElementById('concil-sel');
+    if(sel){sel.value=condoId;loadTx();}
+  },100);
 }
 
-async function dashSindico(){
-  document.getElementById('dash-title').textContent='Dashboard';
-  const cid=user.condominio_id;
-  if(!cid){document.getElementById('dash-body').innerHTML='<div class="alert ay"><i class="ti ti-alert-circle"></i><div><b>Condomínio não vinculado</b><div>Contate a administradora</div></div></div>';return;}
-  await dashCondoSindico(user.tenant_id,cid);
+// ── MÓDULOS ──────────────────────────────────────────────────
+function populateCondoSelects(cds){
+  ['concil-sel','lanc-sel'].forEach(id=>{
+    const s=document.getElementById(id);
+    if(!s)return;
+    const cur=s.value;
+    s.innerHTML='<option value="">— Selecionar condomínio —</option>';
+    cds.forEach(c=>s.innerHTML+=`<option value="${c.id}">${c.nome}</option>`);
+    if(cur)s.value=cur;
+  });
+  const uc=document.getElementById('u-condo');
+  if(uc){uc.innerHTML='<option value="">— Selecionar —</option>';cds.forEach(c=>uc.innerHTML+=`<option value="${c.id}">${c.nome}</option>`);}
 }
 
-async function dashCondoSindico(tid,cid){
-  const d=await api('GET',`/tenants/${tid}/condominios/${cid}/dashboard`);
-  document.getElementById('dash-title').textContent=d.condominio.nome;
-  document.getElementById('tb-ctx').textContent=d.condominio.nome.substring(0,20);
-  document.getElementById('ext-saldo').textContent='R$ '+(d.metricas.saldo_total/1000).toFixed(0)+'k';
-  document.getElementById('ext-rec').textContent='R$ '+d.metricas.receita_mes.toLocaleString('pt-BR',{minimumFractionDigits:0});
-  document.getElementById('ext-desp').textContent='R$ '+d.metricas.despesa_mes.toLocaleString('pt-BR',{minimumFractionDigits:0});
-  document.getElementById('tb-ext').innerHTML=d.ultimas_transacoes.map(t=>`<tr><td class="mono">${t.data}</td><td>${t.descricao}</td><td><span class="badge ${t.tipo==='credito'?'bg':'bx'}">${t.tipo==='credito'?'Crédito':'Débito'}</span></td><td><span class="amt ${t.tipo==='credito'?'c':'d'}">${t.tipo==='debito'?'−':'+'}R$ ${t.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td><td>${t.status==='conciliada'?'<span class="badge bg" style="font-size:9px"><span class="dot dg"></span>OK</span>':'<span class="badge by" style="font-size:9px"><span class="dot dy"></span>Pend.</span>'}</td></tr>`).join('');
-  const m=d.metricas;
-  document.getElementById('dash-body').innerHTML=`
-  <div class="g3">
-    <div class="mc"><div class="ml">Saldo em conta</div><div class="mv up">R$ ${(m.saldo_total/1000).toFixed(0)}k</div></div>
-    <div class="mc"><div class="ml">Receitas do mês</div><div class="mv up">R$ ${m.receita_mes.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div></div>
-    <div class="mc"><div class="ml">Despesas do mês</div><div class="mv dn">R$ ${m.despesa_mes.toLocaleString('pt-BR',{minimumFractionDigits:0})}</div></div>
-  </div>
-  <div class="g2">
-    <div class="card">
-      <div class="ch"><i class="ti ti-calendar" style="color:var(--yellow);margin-right:5px"></i>Próximos vencimentos</div>
-      ${d.proximos_vencimentos.length===0?'<div class="empty"><i class="ti ti-calendar-check"></i><p>Sem vencimentos nos próximos 30 dias</p></div>':d.proximos_vencimentos.map(v=>`<div class="row"><div><div class="rl">${v.descricao}</div><div class="rs">Vence ${new Date(v.data_vencimento+'T00:00:00').toLocaleDateString('pt-BR')}</div></div><div class="amt d">R$ ${v.valor.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div></div>`).join('')}
-    </div>
-    <div class="card">
-      <div class="ch"><i class="ti ti-activity" style="color:var(--blue);margin-right:5px"></i>Saúde financeira</div>
-      ${m.saldo_total<10000?'<div class="alert ar"><i class="ti ti-alert-circle"></i><div><b>Saldo baixo</b></div></div>':'<div class="alert ag"><i class="ti ti-check"></i><div><b>Saldo saudável</b></div></div>'}
-      ${m.saldo_mes>=0?`<div class="alert ag"><i class="ti ti-trending-up"></i><div><b>Mês positivo: +R$ ${m.saldo_mes.toLocaleString('pt-BR',{minimumFractionDigits:2})}</b></div></div>`:`<div class="alert ar"><i class="ti ti-trending-down"></i><div><b>Déficit: −R$ ${Math.abs(m.saldo_mes).toLocaleString('pt-BR',{minimumFractionDigits:2})}</b></div></div>`}
-    </div>
-  </div>`;
-}
-
-async function dashMorador(){
-  document.getElementById('dash-title').textContent='Meu Painel';
-  document.getElementById('tb-ctx').textContent=user.nome.split(' ')[0];
-  document.getElementById('dash-body').innerHTML=`
-  <div class="alert ab" style="margin-bottom:14px"><i class="ti ti-home"></i><div><b>Bem-vindo, ${user.nome.split(' ')[0]}!</b><div>Acesse boletos e documentos pelo menu lateral.</div></div></div>
-  <div class="g2">
-    <div class="card">
-      <div class="ch"><i class="ti ti-receipt" style="color:var(--yellow);margin-right:5px"></i>Próximo boleto</div>
-      <div class="boleto-card" style="margin-bottom:0"><div class="boleto-info"><div class="desc">Taxa condominial — Junho 2026</div><div class="venc">Vencimento: 10/06/2026</div></div><div style="text-align:right"><div class="boleto-valor pendente">R$ 850,00</div><button class="btn btns" style="font-size:10px;padding:4px 8px;margin-top:6px"><i class="ti ti-download"></i>2ª via</button></div></div>
-    </div>
-    <div class="card">
-      <div class="ch"><i class="ti ti-bell" style="color:var(--blue);margin-right:5px"></i>Avisos</div>
-      <div class="alert ab"><i class="ti ti-megaphone"></i><div><b>Assembleia Geral Ordinária</b><div>15/06/2026 às 19h — Salão de festas</div></div></div>
-      <div class="alert ag"><i class="ti ti-check"></i><div><b>Elevador em funcionamento</b><div>Manutenção concluída</div></div></div>
-    </div>
-  </div>`;
-}
-
-// ── MÓDULOS ───────────────────────────────────────────────────
 async function loadAdms(){
   document.getElementById('tb-adms').innerHTML='<tr><td colspan="6"><div class="tbl-loading"><span class="sp"></span></div></td></tr>';
   try{
     const d=await api('GET','/tenants');
     document.getElementById('adms-sub').textContent=d.length+' administradoras';
     document.getElementById('tb-adms').innerHTML=d.map((a,i)=>`<tr>
-      <td class="mono">${i+1}</td><td><b>${a.nome}</b><div style="font-size:10px;color:var(--text2)">${a.cidade||''}${a.estado?'/'+a.estado:''}</div></td>
-      <td class="mono">${a.cnpj}</td><td><span class="badge bb">${a.n_condominios||0}</span></td>
+      <td class="mono">${i+1}</td>
+      <td style="color:var(--light);font-weight:500">${a.nome}<div style="font-size:9px;color:var(--dim)">${a.cidade||''}${a.estado?'/'+a.estado:''}</div></td>
+      <td class="mono">${a.cnpj}</td>
+      <td><span class="badge bb">${a.n_condominios||0}</span></td>
       <td><span class="badge ${a.ativo?'bg':'bx'}">${a.ativo?'Ativo':'Inativo'}</span></td>
-      <td><button class="btn btns" style="font-size:10px;padding:4px 8px" onclick="entrarContexto('${a.id}','${a.nome.replace(/'/g,"\\'")}')"><i class="ti ti-login"></i>Entrar</button></td>
+      <td><button class="btn btns" style="font-size:9px;padding:3px 8px" onclick="entrarContexto('${a.id}','${a.nome.replace(/'/g,"\\'")}')"><i class="ti ti-login"></i>Entrar</button></td>
     </tr>`).join('')||'<tr><td colspan="6"><div class="empty"><i class="ti ti-building-bank"></i><p>Nenhuma administradora</p></div></td></tr>';
   }catch(ex){toast(ex.message,'error');}
 }
@@ -956,44 +1194,24 @@ async function loadCondos(){
     const d=await api('GET',`/tenants/${tid}/condominios`);
     condos=d;
     document.getElementById('condos-sub').textContent=d.length+' condomínios';
+    populateCondoSelects(d);
     document.getElementById('tb-condos').innerHTML=d.map(c=>`<tr>
-      <td><b>${c.nome}</b></td><td>${c.cidade||'—'}/${c.estado||'—'}</td><td>${c.total_unidades}</td>
+      <td style="color:var(--light);font-weight:500">${c.nome}</td>
+      <td>${c.cidade||'—'}/${c.estado||'—'}</td>
+      <td>${c.total_unidades}</td>
       <td>—</td><td>—</td>
-      <td style="display:flex;gap:5px"><button class="btn" style="font-size:10px;padding:4px 8px" onclick="nav('concil')"><i class="ti ti-arrows-exchange"></i>Conciliar</button><button class="btn btns" style="font-size:10px;padding:4px 8px" onclick="dashCondo('${c.id}');nav('dash')"><i class="ti ti-chart-bar"></i></button></td>
+      <td><button class="btn" style="font-size:9px;padding:3px 8px" onclick="irConciliarCondo('${c.id}')"><i class="ti ti-sparkles"></i>Conciliar</button></td>
     </tr>`).join('')||'<tr><td colspan="6"><div class="empty"><i class="ti ti-building"></i><p>Nenhum condomínio</p></div></td></tr>';
-    ['concil-sel','lanc-sel'].forEach(id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML='<option value="">— Condomínio —</option>';d.forEach(c=>s.innerHTML+=`<option value="${c.id}">${c.nome}</option>`);});
-  }catch(ex){toast(ex.message,'error');}
-}
-
-async function loadContas(){
-  const tid=ctx?ctx.tenantId:user.tenant_id;
-  if(!tid)return;
-  document.getElementById('tb-contas').innerHTML='<tr><td colspan="6"><div class="tbl-loading"><span class="sp"></span></div></td></tr>';
-  try{
-    const d=condos.length?condos:await api('GET',`/tenants/${tid}/condominios`);
-    let rows='';
-    for(const c of d){
-      const cts=await api('GET',`/tenants/${tid}/condominios/${c.id}/contas`);
-      rows+=cts.map(ct=>`<tr>
-        <td>${c.nome}</td><td><span class="tag">${ct.banco_nome}</span></td>
-        <td class="mono">${ct.agencia||'—'}/${ct.conta||'—'}</td>
-        <td><span class="amt c">${ct.saldo_atual?'R$ '+parseFloat(ct.saldo_atual).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</span></td>
-        <td class="mono">${ct.ultima_sync?new Date(ct.ultima_sync).toLocaleString('pt-BR'):'—'}</td>
-        <td><span class="badge ${ct.pluggy_status==='UPDATED'?'bg':'by'}"><span class="dot ${ct.pluggy_status==='UPDATED'?'dg':'dy'}"></span>${ct.pluggy_status||'N/A'}</span></td>
-      </tr>`).join('');
-    }
-    document.getElementById('tb-contas').innerHTML=rows||'<tr><td colspan="6"><div class="empty"><i class="ti ti-credit-card"></i><p>Nenhuma conta</p></div></td></tr>';
   }catch(ex){toast(ex.message,'error');}
 }
 
 async function loadConcilPage(){
   const tid=ctx?ctx.tenantId:user.tenant_id;
   if(!tid)return;
-  const d=condos.length?condos:await api('GET',`/tenants/${tid}/condominios`).catch(()=>[]);
-  condos=d;
-  const s=document.getElementById('concil-sel');
-  s.innerHTML='<option value="">— Condomínio —</option>';
-  d.forEach(c=>s.innerHTML+=`<option value="${c.id}">${c.nome}</option>`);
+  if(!condos.length){
+    const d=await api('GET',`/tenants/${tid}/condominios`).catch(()=>[]);
+    condos=d;populateCondoSelects(d);
+  } else populateCondoSelects(condos);
 }
 
 async function loadTx(){
@@ -1013,19 +1231,24 @@ function updTxM(){
   document.getElementById('cm-c').textContent=allTx.filter(t=>t.status_conciliacao==='conciliada').length;
   document.getElementById('cm-p').textContent=allTx.filter(t=>t.status_conciliacao==='pendente').length;
   document.getElementById('cm-d').textContent=allTx.filter(t=>t.status_conciliacao==='divergencia').length;
+  document.getElementById('tx-count').textContent=allTx.length+' transações';
 }
 
 function renderTx(){
   const f=txFilter?allTx.filter(t=>t.status_conciliacao===txFilter):allTx;
   document.getElementById('tx-count').textContent=f.length+' transações';
-  const sb=s=>({conciliada:`<span class="badge bg"><span class="dot dg"></span>Conciliada</span>`,pendente:`<span class="badge by"><span class="dot dy"></span>Pendente</span>`,divergencia:`<span class="badge br"><span class="dot dr"></span>Divergência</span>`}[s]||s);
+  const sb=s=>({
+    conciliada:`<span class="badge bg"><span class="dot dg"></span>Conciliada</span>`,
+    pendente:`<span class="badge by"><span class="dot dy"></span>Pendente</span>`,
+    divergencia:`<span class="badge br"><span class="dot dr"></span>Divergência</span>`,
+  }[s]||s);
   document.getElementById('tb-tx').innerHTML=f.map(t=>`<tr>
     <td class="mono">${new Date(t.data).toLocaleDateString('pt-BR')}</td>
-    <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.descricao}</td>
-    <td><span class="badge ${t.tipo==='credito'?'bg':'bx'}">${t.tipo==='credito'?'Crédito':'Débito'}</span></td>
+    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ghost)">${t.descricao}</td>
+    <td><span class="badge ${t.tipo==='credito'?'bg':'bx'}" style="font-size:9px">${t.tipo==='credito'?'Crédito':'Débito'}</span></td>
     <td><span class="amt ${t.tipo==='credito'?'c':'d'}">${t.tipo==='debito'?'−':'+'}R$ ${parseFloat(t.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
     <td>${sb(t.status_conciliacao)}</td>
-    <td>${t.status_conciliacao==='pendente'?`<button class="btn" style="font-size:10px;padding:3px 7px" onclick="manualConcil('${t.id}')"><i class="ti ti-check"></i></button>`:''}</td>
+    <td>${t.status_conciliacao==='pendente'?`<button class="btn" style="font-size:9px;padding:3px 7px" onclick="manualConcil('${t.id}')"><i class="ti ti-check"></i></button>`:''}</td>
   </tr>`).join('')||'<tr><td colspan="6"><div class="empty"><i class="ti ti-arrows-exchange"></i><p>Sem transações</p></div></td></tr>';
 }
 
@@ -1036,13 +1259,13 @@ async function runConcil(){
   const cid=document.getElementById('concil-sel').value;
   if(!cid){toast('Selecione um condomínio','error');return;}
   const btn=document.getElementById('btn-concil');
-  btn.innerHTML='<span class="sp"></span>';btn.disabled=true;
+  btn.innerHTML='<span class="sp"></span> Processando...';btn.disabled=true;
   try{
     const r=await api('POST',`/tenants/${tid}/condominios/${cid}/conciliar`,{});
-    toast(`✓ ${r.conciliadas} conciliadas · ${r.sugeridas} sugeridas · ${r.pendentes} pendentes`,'success',5000);
+    toast(`✓ ${r.conciliadas} conciliadas · ${r.sugeridas||0} sugeridas · ${r.pendentes} pendentes`,'success',5000);
     await loadTx();
   }catch(ex){toast(ex.message,'error');}
-  btn.innerHTML='<i class="ti ti-magic"></i>Conciliar auto';btn.disabled=false;
+  btn.innerHTML='<i class="ti ti-sparkles"></i>Conciliar auto';btn.disabled=false;
 }
 
 async function manualConcil(txId){
@@ -1061,53 +1284,53 @@ async function loadLanc(){
   const tid=ctx?ctx.tenantId:user.tenant_id;
   const cid=document.getElementById('lanc-sel').value;
   if(!cid){document.getElementById('tb-lanc').innerHTML='<tr><td colspan="7"><div class="empty"><i class="ti ti-list"></i><p>Selecione um condomínio</p></div></td></tr>';return;}
-  document.getElementById('lanc-sub').textContent='Carregando...';
   document.getElementById('tb-lanc').innerHTML='<tr><td colspan="7"><div class="tbl-loading"><span class="sp"></span></div></td></tr>';
   try{
     allLanc=await api('GET',`/tenants/${tid}/condominios/${cid}/lancamentos`);
-    document.getElementById('lanc-sub').textContent=condos.find(c=>c.id===cid)?.nome||'';
     renderLanc();
   }catch(ex){toast(ex.message,'error');}
 }
 
 function renderLanc(){
   const f=lancFilter?allLanc.filter(l=>l.status===lancFilter):allLanc;
-  const rl={super_admin:'Super Admin',admin_tenant:'Admin',gerente:'Gerente',operador:'Operador',sindico:'Síndico',morador:'Morador'};
-  const sb=s=>({aberto:`<span class="badge by"><span class="dot dy"></span>Aberto</span>`,pago:`<span class="badge bg"><span class="dot dg"></span>Pago</span>`,cancelado:`<span class="badge bx">Cancelado</span>`,vencido:`<span class="badge br"><span class="dot dr"></span>Vencido</span>`}[s]||`<span class="badge bx">${s}</span>`);
-  const tip={receita:'bg',despesa:'br',imposto:'by',transferencia:'bb'};
+  const tip={receita:'bg',despesa:'br',imposto:'by'};
+  const sb=s=>({
+    aberto:`<span class="badge by"><span class="dot dy"></span>Aberto</span>`,
+    pago:`<span class="badge bg"><span class="dot dg"></span>Pago</span>`,
+    cancelado:`<span class="badge bx">Cancelado</span>`,
+    vencido:`<span class="badge br"><span class="dot dr"></span>Vencido</span>`,
+  }[s]||`<span class="badge bx">${s}</span>`);
   document.getElementById('tb-lanc').innerHTML=f.map(l=>`<tr>
-    <td><b>${l.descricao}</b></td>
+    <td style="color:var(--ghost)">${l.descricao}</td>
     <td><span class="badge ${tip[l.tipo]||'bx'}">${l.tipo}</span></td>
     <td><span class="amt ${l.tipo==='receita'?'c':'d'}">R$ ${parseFloat(l.valor).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></td>
     <td class="mono">${new Date(l.data_vencimento+'T00:00:00').toLocaleDateString('pt-BR')}</td>
     <td>${l.numero_parcela?`<span class="tag">${l.numero_parcela}/${l.total_parcelas}</span>`:'—'}</td>
     <td>${sb(l.status)}</td>
-    <td>${l.status!=='cancelado'&&l.status!=='pago'?`<button class="btn btnd" style="font-size:10px;padding:3px 7px" onclick="cancelarLanc('${l.id}')"><i class="ti ti-trash"></i></button>`:'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="7"><div class="empty"><i class="ti ti-list"></i><p>Nenhum lançamento encontrado</p></div></td></tr>';
+    <td>${l.status!=='cancelado'&&l.status!=='pago'?`<button class="btn btnd" style="font-size:9px;padding:3px 7px" onclick="cancelarLanc('${l.id}')"><i class="ti ti-trash"></i></button>`:'—'}</td>
+  </tr>`).join('')||'<tr><td colspan="7"><div class="empty"><i class="ti ti-list"></i><p>Nenhum lançamento</p></div></td></tr>';
 }
 
 function setLancF(el,f){lancFilter=f;document.querySelectorAll('.fp-btn').forEach(x=>x.classList.remove('active'));el.classList.add('active');renderLanc();}
 
-async function cancelarLanc(lancId){
+async function cancelarLanc(id){
   const tid=ctx?ctx.tenantId:user.tenant_id;
   const cid=document.getElementById('lanc-sel').value;
   try{
-    await confirm2('Cancelar lançamento','Este lançamento será marcado como cancelado. Continuar?');
-    await api('DELETE',`/tenants/${tid}/condominios/${cid}/lancamentos/${lancId}`);
-    toast('Lançamento cancelado','success');
-    await loadLanc();
-  }catch(ex){if(ex.message!=='undefined')toast(ex.message,'error');}
+    await confirm2('Cancelar lançamento','Este lançamento será marcado como cancelado.');
+    await api('DELETE',`/tenants/${tid}/condominios/${cid}/lancamentos/${id}`);
+    toast('Cancelado','success');await loadLanc();
+  }catch(ex){if(ex.message&&ex.message!=='undefined')toast(ex.message,'error');}
 }
 
 async function doCreateLanc(){
   const cid=document.getElementById('lanc-sel').value;
-  if(!cid){toast('Selecione um condomínio primeiro','error');return;}
+  if(!cid){toast('Selecione um condomínio','error');return;}
   if(!validar([['l-desc','Descrição'],['l-val','Valor'],['l-venc','Vencimento']]))return;
   const tid=ctx?ctx.tenantId:user.tenant_id;
   try{
     await api('POST',`/tenants/${tid}/condominios/${cid}/lancamentos`,{descricao:document.getElementById('l-desc').value,tipo:document.getElementById('l-tipo').value,valor:parseFloat(document.getElementById('l-val').value),data_vencimento:document.getElementById('l-venc').value,mes_referencia:document.getElementById('l-mes').value});
     closeM('m-lanc');toast('Lançamento criado!','success');
-    // Limpa form
     ['l-desc','l-val','l-venc','l-mes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     await loadLanc();
   }catch(ex){toast(ex.message,'error');}
@@ -1122,10 +1345,11 @@ async function loadUsers(){
     const rl={super_admin:'Super Admin',admin_tenant:'Admin',gerente:'Gerente',operador:'Operador',sindico:'Síndico',morador:'Morador'};
     const rc={super_admin:'rb-sa',admin_tenant:'rb-ad',gerente:'rb-ge',operador:'rb-op',sindico:'rb-si',morador:'rb-mo'};
     document.getElementById('tb-usrs').innerHTML=d.map(u=>`<tr>
-      <td><b>${u.nome}</b></td><td class="mono">${u.email}</td>
+      <td style="color:var(--light);font-weight:500">${u.nome}</td>
+      <td class="mono">${u.email}</td>
       <td><span class="rb ${rc[u.role]||'rb-op'}">${rl[u.role]||u.role}</span></td>
       <td><span class="badge ${u.ativo?'bg':'bx'}">${u.ativo?'Ativo':'Inativo'}</span></td>
-      <td>${u.ativo&&u.id!==user.id?`<button class="btn btnd" style="font-size:10px;padding:3px 7px" onclick="desativarUsuario('${u.id}','${u.nome.replace(/'/g,"\\'")}')"><i class="ti ti-user-off"></i></button>`:'—'}</td>
+      <td>${u.ativo&&u.id!==user.id?`<button class="btn btnd" style="font-size:9px;padding:3px 7px" onclick="desativarUser('${u.id}','${u.nome.replace(/'/g,"\\'")}')"><i class="ti ti-user-off"></i></button>`:'—'}</td>
     </tr>`).join('');
   }catch(ex){toast(ex.message,'error');}
 }
@@ -1137,7 +1361,7 @@ function toggleCondoField(){
 
 async function doCreateUser(){
   if(!validar([['u-nome','Nome'],['u-email','Email'],['u-senha','Senha']]))return;
-  if(!validarSenhas('u-senha','u-senha2','u-senha-err'))return;
+  if(!validarSenhas('u-senha','u-senha2','u-serr'))return;
   const tid=ctx?ctx.tenantId:user.tenant_id;
   const role=document.getElementById('u-role').value;
   const condoId=document.getElementById('u-condo').value;
@@ -1153,52 +1377,50 @@ async function doCreateUser(){
   }catch(ex){toast(ex.message,'error');}
 }
 
-async function desativarUsuario(uid,nome){
+async function desativarUser(uid,nome){
   try{
-    await confirm2('Desativar usuário',`Desativar "${nome}"? O usuário perderá acesso ao sistema.`);
+    await confirm2('Desativar usuário',`Desativar "${nome}"?`);
     await api('DELETE',`/usuarios/${uid}`);
-    toast('Usuário desativado','success');
-    loadUsers();
-  }catch(ex){if(ex.message!=='undefined')toast(ex.message,'error');}
+    toast('Usuário desativado','success');loadUsers();
+  }catch(ex){if(ex.message&&ex.message!=='undefined')toast(ex.message,'error');}
 }
 
 // ── TENANTS ───────────────────────────────────────────────────
 async function doCreateTenant(){
-  if(!validar([['t-nome','Nome'],['t-cnpj','CNPJ'],['t-email','Email']]))return;
+  if(!validar([['t-nome','Nome'],['t-email','Email']]))return;
   try{
-    const geo=window._geocode_t;
+    const geo=window._geo_t;
     const d=await api('POST','/tenants',{nome:document.getElementById('t-nome').value,cnpj:document.getElementById('t-cnpj').value.replace(/\D/g,''),email:document.getElementById('t-email').value});
-    const endBody={endereco:document.getElementById('t-end')?.value||'',cidade:document.getElementById('t-cidade')?.value||'',estado:document.getElementById('t-uf')?.value||'',cep:document.getElementById('t-cep')?.value||'',lat:geo?.lat||null,lng:geo?.lng||null};
-    if(endBody.cidade||endBody.lat)await api('PATCH',`/tenants/${d.id}/endereco`,endBody).catch(()=>{});
-    window._geocode_t=null;
+    const end={endereco:document.getElementById('t-end')?.value||'',cidade:document.getElementById('t-cidade')?.value||'',estado:document.getElementById('t-uf')?.value||'',lat:geo?.lat||null,lng:geo?.lng||null};
+    if(end.cidade||end.lat)await api('PATCH',`/tenants/${d.id}/endereco`,end).catch(()=>{});
+    window._geo_t=null;
     closeM('m-tenant');toast('Administradora criada!','success');
-    ['t-nome','t-cnpj','t-email','t-cidade','t-uf','t-end','t-cep'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['t-nome','t-cnpj','t-email','t-cidade','t-uf','t-end'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     if(user.role==='super_admin')loadAdms();
   }catch(ex){toast(ex.message,'error');}
 }
 
 async function doCreateCondo(){
-  if(!validar([['c-nome','Nome'],['c-unid','Total de unidades']]))return;
+  if(!validar([['c-nome','Nome'],['c-unid','Unidades']]))return;
   const tid=ctx?ctx.tenantId:user.tenant_id;
   try{
-    const geo=window._geocode_c;
-    const d=await api('POST',`/tenants/${tid}/condominios`,{nome:document.getElementById('c-nome').value,cnpj:document.getElementById('c-cnpj').value.replace(/\D/g,'')||undefined,cidade:document.getElementById('c-cidade').value,estado:document.getElementById('c-uf').value,total_unidades:parseInt(document.getElementById('c-unid').value)||0,endereco:document.getElementById('c-end')?.value||'',cep:document.getElementById('c-cep')?.value||''});
-    if(geo?.lat)await api('PATCH',`/tenants/${tid}/condominios/${d.id}/endereco`,{lat:geo.lat,lng:geo.lng,endereco:document.getElementById('c-end')?.value||'',cidade:document.getElementById('c-cidade').value,estado:document.getElementById('c-uf').value,cep:document.getElementById('c-cep')?.value||''}).catch(()=>{});
-    window._geocode_c=null;
+    const geo=window._geo_c;
+    await api('POST',`/tenants/${tid}/condominios`,{nome:document.getElementById('c-nome').value,cnpj:document.getElementById('c-cnpj').value.replace(/\D/g,'')||undefined,cidade:document.getElementById('c-cidade').value,estado:document.getElementById('c-uf').value,total_unidades:parseInt(document.getElementById('c-unid').value)||0,endereco:document.getElementById('c-end')?.value||''});
+    window._geo_c=null;
     closeM('m-condo');toast('Condomínio criado!','success');
-    ['c-nome','c-cnpj','c-cidade','c-uf','c-end','c-cep','c-unid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+    ['c-nome','c-cnpj','c-cidade','c-uf','c-end','c-unid'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
     loadCondos();
   }catch(ex){toast(ex.message,'error');}
 }
 
 async function doReg(){
-  if(!validar([['r-nome','Nome'],['r-emp','Nome da empresa'],['r-cnpj','CNPJ'],['r-email','Email'],['r-senha','Senha']]))return;
-  if(!validarSenhas('r-senha','r-senha2','r-senha-err'))return;
+  if(!validar([['r-nome','Nome'],['r-emp','Empresa'],['r-email','Email'],['r-senha','Senha']]))return;
+  if(!validarSenhas('r-senha','r-senha2','r-serr'))return;
   try{
     const d=await api('POST','/auth/registro-administradora',{nome:document.getElementById('r-nome').value,email:document.getElementById('r-email').value,senha:document.getElementById('r-senha').value,nome_empresa:document.getElementById('r-emp').value,cnpj:document.getElementById('r-cnpj').value.replace(/\D/g,'')});
     token=d.access_token;user=await api('GET','/auth/me');
-    localStorage.setItem('cfy_tk',token);localStorage.setItem('cfy_us',JSON.stringify(user));
-    closeM('m-reg');startApp();toast('Administradora criada com sucesso!','success');
+    localStorage.setItem('d1_tk',token);localStorage.setItem('d1_us',JSON.stringify(user));
+    closeM('m-reg');startApp();toast('Bem-vindo ao D One Hub!','success');
   }catch(ex){toast(ex.message,'error');}
 }
 
@@ -1206,153 +1428,182 @@ async function doReg(){
 async function doChangePwd(){
   const s=document.getElementById('p-pwd').value;
   if(!s){closeM('m-perfil');return;}
-  if(s.length<8){toast('Senha deve ter pelo menos 8 caracteres','error');return;}
-  if(!validarSenhas('p-pwd','p-pwd2','p-pwd-err'))return;
+  if(s.length<8){toast('Mínimo 8 caracteres','error');return;}
+  if(!validarSenhas('p-pwd','p-pwd2','p-serr'))return;
   try{
     await api('PATCH',`/usuarios/${user.id}/senha`,{nova_senha:s});
-    toast('Senha alterada com sucesso!','success');
-    document.getElementById('p-pwd').value='';
-    document.getElementById('p-pwd2').value='';
+    toast('Senha alterada!','success');
+    document.getElementById('p-pwd').value='';document.getElementById('p-pwd2').value='';
     closeM('m-perfil');
   }catch(ex){toast(ex.message,'error');}
 }
 
 // ── CONFIGURAÇÕES ─────────────────────────────────────────────
-async function salvarPluggy(){
-  const cid=document.getElementById('cfg-cid').value;
-  const secret=document.getElementById('cfg-secret').value;
-  if(!cid||!secret){toast('Preencha Client ID e Client Secret','error');return;}
+async function loadCfg(){
+  document.getElementById('cfg-cid').value=user.tenant_id||'';
+  const tid=ctx?ctx.tenantId:user.tenant_id;
+  if(!tid)return;
+  document.getElementById('contas-cfg-list').innerHTML='<div class="tbl-loading"><span class="sp"></span></div>';
   try{
-    await api('PATCH',`/tenants/${user.tenant_id}/endereco`,{pluggy_client_id:cid,pluggy_client_secret:secret});
-    toast('Credenciais Pluggy salvas!','success');
-  }catch(ex){toast(ex.message,'error');}
+    const condsList=condos.length?condos:await api('GET',`/tenants/${tid}/condominios`).catch(()=>[]);
+    let html='';
+    for(const c of condsList.slice(0,5)){
+      const cts=await api('GET',`/tenants/${tid}/condominios/${c.id}/contas`).catch(()=>[]);
+      html+=cts.map(ct=>`<div class="match-card">
+        <div class="match-line"><div class="match-desc">${ct.banco_nome} — ${c.nome}</div>
+        <div class="match-meta">Ag. ${ct.agencia||'—'} · Conta ${ct.conta||'—'} · Sync: ${ct.ultima_sync?new Date(ct.ultima_sync).toLocaleDateString('pt-BR'):'—'}</div></div>
+        <span class="badge ${ct.pluggy_status==='UPDATED'?'bg':'by'}"><span class="dot ${ct.pluggy_status==='UPDATED'?'dg':'dy'}"></span>${ct.pluggy_status||'N/A'}</span>
+      </div>`).join('');
+    }
+    document.getElementById('contas-cfg-list').innerHTML=html||'<div class="empty"><i class="ti ti-credit-card"></i><p>Nenhuma conta conectada ainda</p></div>';
+  }catch(ex){}
 }
 
-// ── CNPJ AUTO-PREENCHIMENTO (direto do browser) ───────────────
-const cnpjDebounce={};
-async function buscarCNPJ(prefix){
-  const cnpjEl=document.getElementById(prefix+'-cnpj');
-  if(!cnpjEl)return;
-  const cnpj=cnpjEl.value.replace(/\D/g,'');
+async function salvarPluggy(){
+  toast('Credenciais salvas (requer backend atualizado)','info');
+}
+
+// ── CNPJ ─────────────────────────────────────────────────────
+const _cnpjDb={};
+async function buscarCNPJ(p){
+  const el=document.getElementById(p+'-cnpj');
+  if(!el)return;
+  const cnpj=el.value.replace(/\D/g,'');
   if(cnpj.length!==14)return;
-  clearTimeout(cnpjDebounce[prefix]);
-  cnpjDebounce[prefix]=setTimeout(async()=>{
-    const loading=document.getElementById(prefix+'-cnpj-loading');
-    const ok=document.getElementById(prefix+'-cnpj-ok');
-    if(loading)loading.style.display='block';
+  clearTimeout(_cnpjDb[p]);
+  _cnpjDb[p]=setTimeout(async()=>{
+    const ok=document.getElementById(p+'-cnpj-ok');
     if(ok)ok.style.display='none';
-    const apis=[
-      `https://brasilapi.com.br/api/cnpj/v1/${cnpj}`,
-      `https://open.cnpja.com/office/${cnpj}`,
-      `https://publica.cnpj.ws/cnpj/${cnpj}`,
-    ];
+    const apis=[`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`,`https://open.cnpja.com/office/${cnpj}`,`https://publica.cnpj.ws/cnpj/${cnpj}`];
     let dados=null;
     for(const url of apis){
       try{
         const r=await fetch(url,{headers:{'Accept':'application/json'}});
         if(!r.ok)continue;
         const d=await r.json();
-        if(d.razao_social){
-          dados={nome:d.razao_social,email:d.email||'',municipio:d.municipio||'',uf:d.uf||'',cep:d.cep||'',logradouro:d.logradouro||'',numero:d.numero||'',bairro:d.bairro||''};
-        }else if(d.company||d.estabelecimento){
-          const est=d.estabelecimento||{};
-          const addr=d.address||{};
-          dados={nome:d.company?.name||est.nome_fantasia||est.razao_social||'',email:(d.emails||[])[0]?.address||est.email||'',municipio:addr.city||est.cidade?.descricao||'',uf:addr.state||est.estado?.sigla||'',cep:addr.zip||est.cep||'',logradouro:addr.street||est.logradouro||'',numero:addr.number||est.numero||'',bairro:addr.district||est.bairro||''};
-        }
+        if(d.razao_social)dados={nome:d.razao_social,email:d.email||'',municipio:d.municipio||'',uf:d.uf||'',cep:d.cep||'',logradouro:d.logradouro||'',numero:d.numero||''};
+        else if(d.company||d.estabelecimento){const est=d.estabelecimento||{};const addr=d.address||{};dados={nome:d.company?.name||est.razao_social||'',email:(d.emails||[])[0]?.address||'',municipio:addr.city||est.cidade?.descricao||'',uf:addr.state||est.estado?.sigla||'',cep:addr.zip||est.cep||'',logradouro:addr.street||est.logradouro||'',numero:addr.number||est.numero||''};}
         if(dados&&dados.nome)break;
       }catch(ex){continue;}
     }
-    if(loading)loading.style.display='none';
     if(!dados||!dados.nome){toast('CNPJ não encontrado. Preencha manualmente.','error');return;}
-    const end=`${dados.logradouro} ${dados.numero}, ${dados.bairro}, ${dados.municipio}/${dados.uf}`.replace(/\s+/g,' ').trim();
-    const fields={nome:dados.nome,email:dados.email,cidade:dados.municipio,uf:dados.uf,end,cep:dados.cep};
-    Object.entries(fields).forEach(([k,v])=>{const el=document.getElementById(prefix+'-'+k);if(el&&v&&!el.value)el.value=v;});
+    const fields={nome:dados.nome,email:dados.email,cidade:dados.municipio,uf:dados.uf,end:`${dados.logradouro} ${dados.numero}`.trim()};
+    Object.entries(fields).forEach(([k,v])=>{const el=document.getElementById(p+'-'+k);if(el&&v&&!el.value)el.value=v;});
     if(ok)ok.style.display='block';
-    if(dados.municipio&&dados.uf)geocodificarEndereco(end||`${dados.municipio},${dados.uf},Brasil`,prefix);
+    if(dados.municipio)geocode(`${dados.logradouro} ${dados.numero}, ${dados.municipio}, ${dados.uf}, Brasil`,p);
   },400);
 }
 
-async function geocodificarEndereco(endereco,prefix){
+async function geocode(addr,p){
   try{
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(endereco)}&format=json&limit=1&countrycodes=br`,{headers:{'User-Agent':'DOneFinance/1.0'}});
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(addr)}&format=json&limit=1&countrycodes=br`,{headers:{'User-Agent':'DOneHub/1.0'}});
     const d=await r.json();
-    if(d&&d[0])window['_geocode_'+prefix]={lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
+    if(d&&d[0])window[`_geo_${p}`]={lat:parseFloat(d[0].lat),lng:parseFloat(d[0].lon)};
   }catch(ex){}
 }
 
-// ── MAPA LEAFLET ──────────────────────────────────────────────
-const leafletMaps={};
-const BR_CENTER=[-14.2,-51.9],BR_ZOOM=4;
-function initMap(divId,center,zoom){
-  if(leafletMaps[divId]){leafletMaps[divId].remove();delete leafletMaps[divId];}
-  const el=document.getElementById(divId);
-  if(!el)return null;
-  const m=L.map(divId,{center:center||BR_CENTER,zoom:zoom||BR_ZOOM});
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:18,subdomains:'abcd'}).addTo(m);
-  if(L.control.fullscreen)L.control.fullscreen({position:'topright',title:'Tela cheia',titleCancel:'Sair'}).addTo(m);
-  leafletMaps[divId]=m;return m;
-}
-
+// ── MAPA ─────────────────────────────────────────────────────
+const _maps={};
 function drawMap(divId,pins){
   const el=document.getElementById(divId);
   if(!el)return;
   setTimeout(()=>{
-    const m=initMap(divId);if(!m)return;
-    const statePts={SP:[-23.5,-46.6],RJ:[-22.9,-43.2],MG:[-19.9,-43.9],RS:[-30.0,-51.2],PR:[-25.4,-49.3],SC:[-27.6,-48.5],BA:[-12.9,-38.5],CE:[-3.7,-38.5],PE:[-8.1,-34.9],GO:[-16.7,-49.3],DF:[-15.8,-47.9],default:[-15.8,-47.9]};
+    if(_maps[divId]){_maps[divId].remove();delete _maps[divId];}
+    const m=L.map(divId,{center:[-14.2,-51.9],zoom:4});
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:18,subdomains:'abcd'}).addTo(m);
+    if(L.control.fullscreen)L.control.fullscreen({position:'topright',title:'Tela cheia',titleCancel:'Sair'}).addTo(m);
+    _maps[divId]=m;
+    const sp={SP:[-23.5,-46.6],RJ:[-22.9,-43.2],MG:[-19.9,-43.9],RS:[-30.0,-51.2],PR:[-25.4,-49.3],SC:[-27.6,-48.5],BA:[-12.9,-38.5],CE:[-3.7,-38.5],PE:[-8.1,-34.9],default:[-15.8,-47.9]};
     const bounds=[];
-    pins.forEach((p,i)=>{
+    pins.forEach((p)=>{
       let lat=p.lat,lng=p.lng;
-      if(!lat||!lng){const sp=statePts[p.state]||statePts.default;lat=sp[0]+(Math.random()-.5)*0.5;lng=sp[1]+(Math.random()-.5)*0.5;}
-      const color=p.type==='adm'?'#58a6ff':'#4ade80';
-      const size=p.type==='adm'?12:9;
-      const icon=L.divIcon({className:'',html:`<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};border:2px solid rgba(0,0,0,.4);box-shadow:0 0 8px ${color}88"></div>`,iconSize:[size,size],iconAnchor:[size/2,size/2]});
-      const mk=L.marker([lat,lng],{icon}).addTo(m);
-      mk.bindPopup(`<b>${p.label}</b><br>${p.city||''}`);
+      if(!lat||!lng){const s=sp[p.state]||sp.default;lat=s[0]+(Math.random()-.5)*.5;lng=s[1]+(Math.random()-.5)*.5;}
+      const color=p.type==='adm'?'#3b82f6':'#22c55e';
+      const icon=L.divIcon({className:'',html:`<div style="width:${p.type==='adm'?10:7}px;height:${p.type==='adm'?10:7}px;border-radius:50%;background:${color};border:1.5px solid rgba(0,0,0,.4);box-shadow:0 0 8px ${color}66"></div>`,iconSize:[10,10],iconAnchor:[5,5]});
+      L.marker([lat,lng],{icon}).addTo(m).bindPopup(`<b>${p.label}</b><br>${p.city||''}`);
       bounds.push([lat,lng]);
     });
     if(bounds.length>1)m.fitBounds(bounds,{padding:[40,40]});
-    else if(bounds.length===1)m.setView(bounds[0],12);
   },150);
 }
 
-// ── CHARTS ────────────────────────────────────────────────────
-const isDark=true;
-const gc='rgba(255,255,255,.05)';
-const tc2='#8b949e';
-const bOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#21262d',titleColor:'#e6edf3',bodyColor:'#8b949e',borderColor:'#30363d',borderWidth:1}},scales:{x:{grid:{color:gc},ticks:{color:tc2,font:{size:10}}},y:{grid:{color:gc},ticks:{color:tc2,font:{size:10}}}}};
+// ── CHARTS ───────────────────────────────────────────────────
+const bOpts={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1d24',titleColor:'#e8eaed',bodyColor:'#8891a4',borderColor:'#2e3340',borderWidth:1}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5a6275',font:{size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#5a6275',font:{size:9}}}}};
 function legHTML(items){return items.map(([c,l])=>`<span><span class="ld" style="background:${c}"></span>${l}</span>`).join('');}
 function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
 function mkChart(id,cfg){destroyChart(id);charts[id]=new Chart(id,cfg);return charts[id];}
 
-// ── TOUR GUIADO ───────────────────────────────────────────────
-const tourSteps=[
-  {title:'Bem-vindo ao D One Finance!',desc:'Este tour rápido vai mostrar as principais funcionalidades do sistema. Você pode pular a qualquer momento.'},
-  {title:'Dashboard',desc:'O Dashboard mostra métricas em tempo real: condomínios, saldos, alertas e gráficos financeiros.'},
-  {title:'Mapa interativo',desc:'No dashboard do Super Admin você vê todas as administradoras e condomínios no mapa. Clique nos pins para mais informações.'},
-  {title:'Conciliação bancária',desc:'Importa transações do banco via Pluggy e reconcilia automaticamente com os lançamentos. O algoritmo usa valor, data e tipo para fazer o match.'},
-  {title:'Diferentes níveis de acesso',desc:'Cada usuário vê só o que precisa. Super Admin vê tudo, Administradora vê seus condomínios, Síndico vê o próprio condomínio.'},
+// ── ONBOARDING ────────────────────────────────────────────────
+const obSteps=[
+  {
+    title:'Configure sua primeira conexão bancária',
+    desc:'Para começar a conciliar, você precisa conectar ao menos uma conta bancária via Pluggy Open Finance. O processo leva menos de 2 minutos.',
+    body:`<div style="margin-bottom:16px">
+      <div class="match-card">
+        <i class="ti ti-building-bank" style="font-size:20px;color:var(--muted);flex-shrink:0"></i>
+        <div class="match-line"><div class="match-desc">Conectar via Pluggy</div><div class="match-meta">Banco do Brasil · Itaú · Bradesco · Santander · +200 bancos</div></div>
+        <span class="badge bg">Disponível</span>
+      </div>
+      <div class="match-card">
+        <i class="ti ti-file-upload" style="font-size:20px;color:var(--muted);flex-shrink:0"></i>
+        <div class="match-line"><div class="match-desc">Importar OFX / CSV</div><div class="match-meta">Arquivo de extrato exportado do internet banking</div></div>
+        <span class="badge bx">Em breve</span>
+      </div>
+    </div>`
+  },
+  {
+    title:'Cadastre seu primeiro condomínio',
+    desc:'Cada condomínio tem suas próprias contas bancárias e lançamentos. O CNPJ preenche os dados automaticamente.',
+    body:`<div style="margin-bottom:16px">
+      <div style="background:var(--ink3);border:1px solid var(--wire);border-radius:var(--r);padding:14px;text-align:center">
+        <i class="ti ti-building" style="font-size:28px;color:var(--dim);display:block;margin-bottom:8px"></i>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--font-narrow)">Acesse Condomínios → Novo para cadastrar</div>
+        <div style="font-size:9px;color:var(--dim);font-family:var(--font-narrow);margin-top:4px">CNPJ preenche nome, endereço e cidade automaticamente</div>
+      </div>
+    </div>`
+  },
+  {
+    title:'Pronto para conciliar!',
+    desc:'Com a conta conectada e o condomínio cadastrado, acesse Conciliação e clique em "Conciliar auto". O sistema faz o match automaticamente.',
+    body:`<div style="margin-bottom:16px">
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px;background:var(--ink3);border:1px solid var(--wire);border-radius:var(--r);padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--white)">~80%</div>
+          <div style="font-size:9px;color:var(--dim);font-family:var(--font-narrow);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">Match automático</div>
+        </div>
+        <div style="flex:1;min-width:120px;background:var(--ink3);border:1px solid var(--wire);border-radius:var(--r);padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--white)">2min</div>
+          <div style="font-size:9px;color:var(--dim);font-family:var(--font-narrow);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">Por condomínio</div>
+        </div>
+        <div style="flex:1;min-width:120px;background:var(--ink3);border:1px solid var(--wire);border-radius:var(--r);padding:12px;text-align:center">
+          <div style="font-size:24px;font-weight:700;font-family:var(--mono);color:var(--white)">24/7</div>
+          <div style="font-size:9px;color:var(--dim);font-family:var(--font-narrow);margin-top:2px;letter-spacing:.06em;text-transform:uppercase">Monitoramento</div>
+        </div>
+      </div>
+    </div>`
+  },
 ];
-let tourIdx=0;
-function startTour(){
-  tourIdx=0;renderTourStep();document.getElementById('tour-overlay').style.display='flex';
-}
-function renderTourStep(){
-  const s=tourSteps[tourIdx];
-  document.getElementById('tour-step').textContent=`Passo ${tourIdx+1} de ${tourSteps.length}`;
-  document.getElementById('tour-title').textContent=s.title;
-  document.getElementById('tour-desc').textContent=s.desc;
-  const dots=document.getElementById('tour-dots');
-  dots.innerHTML=tourSteps.map((_,i)=>`<div class="tour-dot${i===tourIdx?' active':''}"></div>`).join('');
-  const btn=document.getElementById('tour-next-btn');
-  btn.innerHTML=tourIdx===tourSteps.length-1?'<i class="ti ti-check"></i> Entendido!':'Próximo <i class="ti ti-arrow-right"></i>';
-}
-function tourNext(){
-  if(tourIdx<tourSteps.length-1){tourIdx++;renderTourStep();}
-  else tourSkip();
-}
-function tourSkip(){document.getElementById('tour-overlay').style.display='none';}
 
-// ── INIT ──────────────────────────────────────────────────────
+function startOnboarding(){
+  obStep=0;renderOb();document.getElementById('ob-overlay').style.display='flex';
+}
+function renderOb(){
+  const s=obSteps[obStep];
+  const dots=document.getElementById('ob-dots');
+  dots.innerHTML=obSteps.map((_,i)=>`<div class="ob-step-dot${i<obStep?' done':i===obStep?' active':''}"></div>`).join('');
+  document.getElementById('ob-title').textContent=s.title;
+  document.getElementById('ob-desc').textContent=s.desc;
+  document.getElementById('ob-body').innerHTML=s.body;
+  const btn=document.getElementById('ob-next-btn');
+  btn.innerHTML=obStep===obSteps.length-1?'<i class="ti ti-check"></i> Começar a usar':'<i class="ti ti-arrow-right"></i> Próximo';
+}
+function obNext(){
+  if(obStep<obSteps.length-1){obStep++;renderOb();}
+  else skipOnboarding();
+}
+function skipOnboarding(){document.getElementById('ob-overlay').style.display='none';}
+
+// ── INIT ─────────────────────────────────────────────────────
 if(token&&user)startApp();
 </script>
 </body>
